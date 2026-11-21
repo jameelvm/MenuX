@@ -1,0 +1,13 @@
+We are continuing our Menu Studio project from a previous ChatGPT session.
+
+Please read the uploaded PROJECT-CONTEXT.md and the latest project documentation ZIP.
+
+First:
+1. Understand the project architecture and current decisions.
+2. Identify what has already been completed.
+3. Identify pending decisions and unresolved questions.
+4. Determine the exact next step.
+
+Do not restart the architecture discussion or repeat completed work.
+
+Continue from the last recorded checkpoint. If there is any conflict between the context document and the latest project documentation, identify it and ask me before making assumptions.
