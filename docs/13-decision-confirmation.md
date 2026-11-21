@@ -2,9 +2,11 @@
 
 Revision 0.3 (draft) · Date: 2026-11-21 · Basis: [doc 12](12-architecture-signoff.md)
 
-> **Status: approved 2026-11-21.** The product owner formally approved P1–P21 with no exceptions, confirmed the United States as the launch market and approved doc 10 §12. The changes in §4 have been applied; the Rev 0.3 baseline is published (doc 14). U13's 30-day grace period remains provisional pending legal review. This document is kept as the confirmation record.
+> **Status: provisional — awaiting explicit confirmation.** Correction 2026-11-21: an earlier session note recorded P1–P21, the US launch market and doc 10 §12 as approved. The product owner has stated these approvals were not explicitly given, so they are **unconfirmed**. Apart from the week-1 start decisions in §1b (W1–W3), nothing in this document is approved, and ADR statuses in doc 11 are Proposed for these items.
 >
-> Original status: provisional.
+> The §4 changes have been drafted into docs 01–11 as proposals (Rev 0.3 draft); they take effect only after confirmation.
+>
+> **Week 1:** week-1 foundation work is approved (W1–W3, §1b) while C1 and C5 remain open. Later work waits only for the specific decisions it needs (§1c).
 
 ---
 
@@ -13,7 +15,7 @@ Revision 0.3 (draft) · Date: 2026-11-21 · Basis: [doc 12](12-architecture-sign
 | # | Decision | Reference | Note |
 |---|----------|-----------|------|
 | P1 | ADR-04 static public projections, **with doc 12 changes** | doc 12 §2 | Separate hostnames (X-5), cache-control table |
-| P2 | ADR-05 static Angular shell + CSR, **with changes** | doc 12 §2 | Runtime UI dictionaries, in-app browser matrix |
+| P2 | ADR-05 static Angular shell + CSR, **with changes** | doc 12 §2 | Runtime UI dictionaries (`en` + `ar`), in-app browser matrix; **Arabic/RTL from day one** (draft 2026-11-21) |
 | P3 | ADR-06 Fargate + Cognito (Keycloak locally), **with changes** | doc 12 §2 | Provider-neutral identity columns (X-2), token contract tests |
 | P4 | ADR-08 AI suggestions need human approval, **with changes** | doc 12 §2 | No allergen inference; AI inputs under the tenant prefix |
 | P5 | ADR-09 TenantIndex deletion, **with TI-1…TI-13** | doc 12 §3 | |
@@ -25,8 +27,8 @@ Revision 0.3 (draft) · Date: 2026-11-21 · Basis: [doc 12](12-architecture-sign
 | P11 | BFF cookie session for the admin portal (T2) | doc 12 §2 ADR-06 | |
 | P12 | U3: reuse items across menus; per-menu price override; no location pricing | doc 12 §6 | |
 | P13 | U4: hotel outlets = locations; no hierarchy above the tenant | doc 12 §6 | |
-| P14 | U5: multilingual model; up to 4 extra languages, entered manually; no AI translation | doc 12 §6 | |
-| P15 | U6: schedules in MVP-1; real-time sold-out in phase 2 (sold-out flag via publish) | doc 12 §6 | |
+| P14 | U5: multilingual model; up to 4 extra languages, entered manually; no AI translation | doc 12 §6 | **Arabic + English end to end in MVP-1**; full multi-language UI required before the UAE launch (draft 2026-11-21) |
+| P15 | U6: schedules in MVP-1; real-time sold-out in phase 2 (sold-out flag via publish) | doc 12 §6 | **Plus date-range overrides** (Ramadan, holidays) (draft 2026-11-21) |
 | P16 | U7: SaaS billing deferred; static plan limits + `tenants.plan_key` | doc 12 §6 | |
 | P17 | U11: no publish approval workflow | doc 12 §6 | |
 | P18 | Ordering, online payments, SaaS billing outside MVP-1 | ADR-12, doc 12 §8 | Already accepted for ordering/payments; billing confirmed as deferred |
@@ -34,15 +36,53 @@ Revision 0.3 (draft) · Date: 2026-11-21 · Basis: [doc 12](12-architecture-sign
 | P20 | U12: **about 20 h/week**. Learning priorities: (1) DynamoDB + consistency, (2) AWS + Terraform, (3) Angular, (4) security fundamentals, (5) testing, CI/CD, observability, production readiness | doc 10 §12 | Provided 2026-11-21 |
 | P21 | 12 weeks = local MVP-1 + first AWS environment; **critical consistency, isolation and recovery tests are never cut** to fit the schedule | doc 10 §12.2 | Provided 2026-11-21 |
 
+### 1a. Market-strategy items adopted as drafts (draft 2026-11-21, Option B chosen)
+
+| # | Draft item | Where |
+|---|-----------|-------|
+| D1 | C4: pilot/validation market **United States**; target commercial launch market **UAE** | C4 below |
+| D2 | ADR-17 rewritten: `me-central-1` proposed from week 9; **week-1 feasibility/service check only**, region decision before week 9; blocker and fallback presented before any change; storage in the UAE disclosed to US pilot users | doc 11 ADR-17 |
+| D3 | ADR-19 (new): market-neutral core with market packs; nothing market-specific hard-coded | doc 11 ADR-19 |
+| D4 | P2, P14, P15 updated; F6 (Unicode/Arabic normalization) and F7 (market packs) revised; about 3–5 days of work **without squeezing the protected tests or the 12-week frame** | doc 14 §3, doc 10 §12 |
+| D5 | Optional `containsPork`, `containsAlcohol`, `halalStatus` fields; rules pending UAE research | doc 02 FR-CAT-09, doc 07 |
+| D6 | C1 and C5 remain **unconfirmed** | §2 |
+| D7 | Doc-by-doc changes and split legal tracks, all as Rev 0.3 draft; **not committed or pushed** | docs 01–14, README |
+
+ADR-17 and ADR-19 remain **Proposed** until the final approval step.
+
+### 1b. Confirmed week-1 start decisions (product owner, 2026-11-21)
+
+| # | Decision | Answer | Limits |
+|---|----------|--------|--------|
+| W1 | Allow week-1 foundation work while C1 and C5 remain open | **Yes** | Later work stays gated by the specific decisions in §1c |
+| W2 | Approve the week-1 scope (doc 10 §12.1 week 1; doc 14 §6) | **Approved** | Week 1 only. **Doesn't** approve the full architecture or roadmap. **No running AWS application resources and no real tenant data** in this phase |
+| W3 | Local orchestration | **Plain Docker Compose** | — |
+
+### 1c. Decision gates by week (from the 2026-11-21 decision list)
+
+| Before week | Decisions needed first (each answered separately) |
+|-------------|---------------------------------------------------|
+| 2 | C5 roadmap for weeks 2–12 (doc 10 §12, P20/P21); ADR-06 (Fargate; Keycloak locally, Cognito in AWS; BFF — P3, P11); ADR-18 (work items + outbox, no SQS/Streams — P8, F1–F3); P13/U4 (outlets = locations, no hierarchy); P16/U7 (billing deferred, `plan_key`) |
+| 3 | ADR-09 (TenantIndex, single writer, deletion — P5, TI-1…13, F5); C4 + ADR-17 + ADR-19 (US pilot → UAE launch, market packs — F6, F7); P12/U3 (item reuse, per-menu prices); P14/U5 (languages, Arabic + English); U10 (food-shop extras) |
+| 4 | P15/U6 (schedules + date overrides, sold-out via publish); ADR-05 for admin right-to-left (P2) |
+| 5 | ADR-10 (publishing — P6, PUB-1…14, F4); P17/U11 (no approval workflow); ADR-04 (static guest path, manifest TTL — P1, P9) |
+| 6 | ADR-11 (QR, rate limits, alarm-only blocking — P7, P10) |
+| 7 | ADR-05 public app (P2) |
+| 9 | ADR-17 region decision (informed by the week-1 feasibility check); G2 pilot-account choice (recommended by then) |
+| Pilot | §12.5 schedule; G1–G12 checklist; each residual risk E-3a…E-3e accepted separately (doc 04 §5.3); success measures CM1–CM6 |
+| Phase 2 | ADR-08, ADR-15 |
+
 ## 2. Requires your explicit confirmation
+
+None of these blocks week-1 foundation work (W1, §1b). Each is needed only by the later work listed in §1c.
 
 | # | Decision | Options / default | Needed by | Why it blocks |
 |---|----------|-------------------|-----------|---------------|
-| C1 | ~~Formal approval of P1–P21~~ | **Approved 2026-11-21, no exceptions** | — | — |
+| C1 | **Formal approval** of P1–P21 | Approve all / list exceptions, or decide item by item | Not needed for week 1. Each part is needed by the week listed in §1c (from week 2); all of it before the Rev 0.3 baseline is published | Turns proposals into the baseline |
 | C2 | ~~U12 weekly hours~~ | **Answered: ~20 h/week** → P20 | — | — |
 | C3 | ~~U12 learning priorities~~ | **Answered** → P20 | — | — |
-| C4 | ~~U2 initial launch market~~ | **United States** (ADR-17; region `us-east-1` proposed) | — | — |
-| C5 | ~~Roadmap doc 10 §12~~ | **Approved as written** | — | — |
+| C4 | **Markets** | **Draft (draft 2026-11-21):** pilot/validation = United States; target commercial launch = UAE; region `me-central-1` proposed (ADR-17; region decision before week 9). Pending final approval | Not needed for week 1 (the `me-central-1` check is a week-1 task under W2). Markets and market packs before week 3; region before week 9 (§1c) | Region, data residency, languages, currency, allergen scheme, legal tracks |
+| C5 | **Roadmap doc 10 §12** | Approve / adjust | Not needed for week 1 (week-1 scope approved under W2). Weeks 2–12 before week 2; the §12.5 pilot schedule before the pilot (§1c) | Replaces the Rev 0.2 plan |
 
 ## 3. Requires legal or market research
 
@@ -50,17 +90,17 @@ Revision 0.3 (draft) · Date: 2026-11-21 · Basis: [doc 12](12-architecture-sign
 |---|-------|---------------------|-----------|
 | L1 | **U13 tenant deletion grace period** | **30 days**, cancellable; public menus offline immediately (provisional, kept) | Legal review, C4 |
 | L2 | U13 retention periods (audit, AI usage, exports, backups, logs) | Doc 12 §6 U13 table | Legal review, C4 |
-| L3 | Allergen and food-information rules for menus in the launch market | Allergen/dietary tags modelled; required fields TBD | C4 |
-| L4 | Accessibility law for the public menu | WCAG 2.2 AA target (NFR-ACC-01) | C4 |
-| L5 | Privacy: data residency, privacy policy, sub-processor list (AWS, Anthropic, email), DPA terms | Region chosen by market; no guest personal data in MVP-1 | C4 |
+| L3 | Food information: **US pilot** (FDA nine as tenant-entered; state/local notices where pilot venues operate) and **UAE launch** (GSO allergen list; Dubai Municipality / ADAFSA menu rules; halal, pork and alcohol labelling; VAT-inclusive display; Arabic requirements) | Market packs; canonical allergen codes; optional halal/pork/alcohol fields | C4 |
+| L4 | Accessibility expectations (US pilot, UAE) | WCAG 2.2 AA including RTL (NFR-ACC-01) | C4 |
+| L5 | Privacy: **US pilot** (pilot terms, privacy notice, state-law applicability, UAE storage disclosure) and **UAE launch** (PDPL and executive regulations, DIFC/ADGM if applicable, cross-border transfers, Arabic notices); sub-processor register | `me-central-1`; no guest personal data in MVP-1 | C4 |
 | L6 | Third-party licences: image library, QR library | MIT-licensed choices preferred | Week-1 verification (technical, no legal advice needed unless a commercial licence applies) |
-| L7 | Market check: languages and currencies needed at launch | Up to 5 languages per menu (P14) | C4 |
+| L7 | Market check: languages and currencies (US pilot: English, USD; UAE: Arabic + English, AED) | Up to 5 languages per menu (P14) | C4 |
 
 These don't block weeks 1–8 (local development), except that L3 should be known before catalogue fields are finalized in week 3, if possible.
 
 ## 4. Technical changes to apply after approval
 
-Applied in one consistent change set when the Rev 0.3 baseline is prepared. Each change removes the matching "⚠ Sign-off review" note.
+Drafted into docs 01–11 on 2026-11-21 as proposals (Rev 0.3 draft); they become the baseline only after C1, C4 and C5 are confirmed. Each change removes the matching "⚠ Sign-off review" note.
 
 | Area | Changes | Documents |
 |------|---------|-----------|
@@ -71,14 +111,14 @@ Applied in one consistent change set when the Rev 0.3 baseline is prepared. Each
 | Identity | BFF cookie session; provider-neutral identity; token contract tests | 04 §6.5, 08 §4.2, 09 §3 |
 | AI | AI inputs at `t/{tenantId}/ai-inputs/` (30-day lifecycle); no allergen inference; structured outputs; per-tenant concurrency 1 | 04 §4.4, 09 §6 |
 | Product defaults | U3–U7, U11 into requirements; FR-TEN, FR-CAT, FR-MENU, FR-AI priorities; MVP-1 scope (doc 12 §8) into the PRD | 01, 02, 03 |
-| Register | ADR-04/05/06/08/09/10/11/15 → Accepted (Rev 0.3); U-items resolved; Part C reduced to the remaining items | 11 |
+| Register | ADR-04/05/06/08/09/10/11/15 → Accepted only after approval (currently Proposed); U-items resolved; Part C reduced to the remaining items | 11 |
 | Roadmap | Doc 10 §12 replaces §5 (if C5 approved); §11 kept as history | 10 |
 | MVP-1 scope | AI menu import and Claude API → phase 2 (P19); learning priorities (P20); protected tests (P21) | 01 §10, 02 FR-AI, 12 §8 (note), 11 ADR-15 |
 | Housekeeping | Revision history Rev 0.3 (approved); `progress.md`; `CLAUDE.md` gate line | README, root files |
 
-## 5. Implementation kickoff checklist (draft — superseded by the final checklist in doc 14 §6)
+## 5. Implementation kickoff checklist (draft — superseded by the checklist in doc 14 §6)
 
-- [ ] C1–C5 confirmed; Rev 0.3 baseline published; `CLAUDE.md` gate lifted
+- [x] Week-1 start decided (W1–W3, §1b); C1 and C5 remain open and gate later weeks (§1c)
 - [ ] `git init`, `.gitignore`, first commit of `docs/`
 - [ ] Version verification recorded in `docs/architecture/versions.md` (.NET 10 SDK, Npgsql, PostgreSQL major on RDS, Angular major, Node LTS, AWS SDK, Terraform, LocalStack features incl. S3 conditional writes, Keycloak)
 - [ ] Image and QR library licences checked (L6)

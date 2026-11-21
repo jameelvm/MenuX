@@ -1,6 +1,6 @@
 # 10 — 12-Week Implementation Roadmap (single developer, local-first)
 
-**Revision 0.3 — approved baseline (2026-11-21). The approved plan is §12.** §5, §6 and §11 are kept as history.
+**Revision 0.3 — DRAFT, pending approval. The proposed plan is §12 (not yet approved, C5).** §5, §6 and §11 are kept as history.
 Revision 0.2: reworked per Architecture Review 0.2 item 11; replaced the team-based Rev 0.1 plan.
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
 
@@ -60,7 +60,7 @@ Review item 6 asks for supported versions to be **checked when the environment i
 | Public "CDN" | Static file server for the public app plus the public-data bucket, with a rewrite rule for `/q/*` and `/m/*` | CloudFront + CloudFront Function |
 | Claude API | Phase 2 | Phase 2 |
 
-Option: a .NET Aspire AppHost can orchestrate the containers and projects and gives a local telemetry dashboard. It's a good learning fit but optional (doc 11 T3).
+Option: a .NET Aspire AppHost can orchestrate the containers and projects and gives a local telemetry dashboard. It's a good learning fit but optional (doc 11 T3). **Decided (W3, 2026-11-21): plain Docker Compose.**
 
 ## 5. Roadmap (Rev 0.2 — superseded by §12)
 
@@ -124,8 +124,8 @@ No prices are listed here because they change. Check current AWS pricing before 
 | Item | Note |
 |------|------|
 | Multi-account AWS Organization and production environment | Target topology in doc 04 §5.1 |
-| DynamoDB LeadingKeys session policies | Required before real tenants, if not done in week 12 |
-| External penetration test | Before real tenants |
+| DynamoDB LeadingKeys session policies (T1) | **Required gate before onboarding any real pilot tenant** (draft; §12.5) |
+| External penetration test | **Required gate before the UAE commercial launch** (draft; §12.5) |
 | SaaS billing and entitlements | Confirm timing (doc 11 U7) |
 | Sold-out overlay, schedules, translations, analytics, custom domains | Product to prioritize |
 | Ordering (pay at venue first), then online payments | Out of MVP-1 (ADR-12) |
@@ -172,9 +172,11 @@ The Rev 0.2 plan above is kept for history. Once approved, this table replaces �
 
 Cut lines (§6) still apply. Adjusted: if behind at the end of week 6, rollback stays API-only and unpublish is done through an admin endpoint. With ~20 h/week (U12), weeks 1–8 plus week 9 are the realistic 12-week target.
 
-## 12. Approved roadmap — Rev 0.3 baseline (approved 2026-11-21)
+## 12. Proposed roadmap — Rev 0.3 draft (pending approval, C5)
 
-Rev 0.3 baseline notes: no SQS anywhere in this plan (ADR-18); AWS region `us-east-1` proposed (ADR-17, confirm before week 9).
+Rev 0.3 draft notes: no SQS anywhere in this plan (ADR-18). Region `me-central-1` proposed (ADR-17; week-1 feasibility check only, region decision before week 9). Market packs and Arabic/RTL add about 3–5 days, absorbed by flex scope. **The protected tests and the 12-week frame are not squeezed**: if the work doesn't fit, flex scope or the timeline moves.
+
+**Week 1 approved (W1–W3, 2026-11-21):** week-1 foundation work may start while C1 and C5 remain open. Scope: the week-1 row below, **without** Keycloak (week 2, after ADR-06) and **without** the `DynamoItemWriter` and its architecture rule (week 3, after ADR-09). No running AWS application resources and no real tenant data. Local orchestration: plain Docker Compose. Later weeks are gated by doc 13 §1c.
 
 **Why revised:** the product owner set U12 to **about 20 hours/week**. Learning priorities, in order: (1) DynamoDB modelling + distributed consistency, (2) AWS + Terraform, (3) Angular, (4) security fundamentals (identity, BFF/OIDC, tenant isolation), (5) testing, CI/CD, observability and production readiness. **AI menu import and the Claude API integration move to phase 2.** The 12 weeks focus on **local MVP-1 plus the first AWS environment**. Critical consistency, tenant-isolation and recovery tests are **protected**: when time runs short, feature scope shrinks or the timeline moves, never these tests.
 
@@ -182,20 +184,22 @@ Rev 0.3 baseline notes: no SQS anywhere in this plan (ADR-18); AWS region `us-ea
 
 | Week | Theme | Core deliverables | Learning focus |
 |------|-------|-------------------|----------------|
-| 1 | Foundations | Version/library verification; `git init`; .NET 10 solution + architecture tests; docker compose; **CI (build + test)**; Angular workspace; AWS account hardening + budget alarm + Terraform state bucket | 5, 2 |
+| 1 | Foundations | Version/library verification; `git init`; .NET 10 solution + architecture tests; docker compose; **CI (build + test)**; Angular workspace; AWS account hardening + budget alarm + Terraform state bucket; **`me-central-1` service/version check** (feasibility only; input to the ADR-17 region decision before week 9) | 5, 2 |
 | 2 | Identity & tenancy | BFF cookie session via Keycloak; provider-neutral identity; tenants, multiple locations, roles/permissions; **RLS**; tenant-status gate; audit; **cross-tenant test harness**; deletion framework skeleton; OpenTelemetry locally | 4, 5 |
-| 3 | Catalog + media | `DynamoItemWriter` (tagging, no upserts); catalog + media tables with TenantIndex; items, modifiers, allergens, i18n maps; uploads + WebP; **coverage scan**; catalog/media purge | 1 |
-| 4 | Menu authoring | Menus, sections, placements, reorder, menu locking (header bumps META), location assignment, schedules, sold-out flag; Angular admin editor; menus purge | 1, 3 |
+| 3 | Catalog + media | `DynamoItemWriter` (tagging, no upserts); catalog + media tables with TenantIndex; items, modifiers, i18n maps; **market packs** (US pilot + UAE skeleton), canonical allergen codes + schemes, halal/pork/alcohol fields, Arabic name normalization; uploads + WebP; **coverage scan**; catalog/media purge | 1 |
+| 4 | Menu authoring | Menus, sections, placements, reorder, menu locking (header bumps META), location assignment, schedules (weekly + date-range overrides), sold-out flag; Angular admin editor with RTL support; menus purge | 1, 3 |
 | 5 | Publishing core | ACTIVEJOB lock, jobs, poller, lease, optimistic snapshot read, content-addressed snapshot, guarded commit, MANIFEST state + builder | 1 |
 | 6 | Publishing robustness + QR | **Failure-injection suite**, reconciler, rollback (full state), unpublish, location deactivation; QR codes + QR/route projections; publishing purge | 1 |
-| 7 | Static public app | Prerendered shell + CSR, schedules, language switch, unavailable states, runtime UI dictionaries; **Lighthouse + axe in CI** | 3, 5 |
+| 7 | Static public app | Prerendered shell + CSR, schedules, language switch, unavailable states, runtime UI dictionaries (`en` + `ar`), **Arabic/RTL** with Arabic font in budget, price-display policy; **Lighthouse + axe + RTL checks in CI** | 3, 5 |
 | 8 | Deletion/export + **local MVP-1 gate** | Deletion orchestration, supervisor, verification passes, S3 versions, identity handling, export; **all protected tests green** (§12.2) | 1, 4, 5 |
-| 9 | First AWS environment | Terraform: cost-reduced VPC, DynamoDB, RDS, S3, two hostnames + CloudFront + Function, WAF (`us-east-1`), ECR, Fargate, ALB (region per ADR-17) | 2 |
+| 9 | First AWS environment | Terraform: cost-reduced VPC, DynamoDB, RDS, S3, two hostnames + CloudFront + Function, WAF (`us-east-1`), ECR, Fargate, ALB in the region decided before week 9 (proposed **`me-central-1`**, ADR-17; if the week-1 check found a blocker, the product owner decides the fallback) | 2 |
 | 10 | Identity + delivery in AWS | Cognito via configuration; **CD with GitHub Actions OIDC**; Secrets Manager; DB migrations as a deployment step; token contract tests against Cognito | 2, 4, 5 |
 | 11 | Observability & operations | OpenTelemetry → CloudWatch/X-Ray; dashboards; alarms (5xx, failed and stuck work items, publish/manifest failures, purge failures, QR misses, budget); log retention; WAF rate rule | 5, 2 |
 | 12 | Production readiness | **PITR restore drills** (DynamoDB, RDS) + projection rebuild from scratch in AWS; public-path load test; security review against the checklist; runbooks (publish stuck, purge failed, restore); cost review; retrospective + phase-2 plan | 5, 4 |
 
 ### 12.2 Protected tests (never cut to fit the schedule)
+
+**Unchanged by the market-split draft (2026-11-21).** The ~3–5 days of localization work are absorbed by the §12.3 flex scope or by moving the timeline, never by reducing these tests. Arabic/RTL checks are added to CI as **additional** checks; they don't replace anything below.
 1. Cross-tenant isolation for every endpoint; RLS (no tenant → zero rows; no pooled-connection leakage; no BYPASSRLS for the app role).
 2. TenantIndex coverage scan across all tables; architecture rule "no DynamoDB writes outside `DynamoItemWriter`".
 3. Tenant deletion end-to-end, including crash/resume, in-flight job races, no downstream writes triggered by purge (outbox/handlers skip non-active tenants), S3 versions, multi-tenant users, and the other tenant intact (doc 12 §3.3).
@@ -205,7 +209,7 @@ Rev 0.3 baseline notes: no SQS anywhere in this plan (ADR-18); AWS region `us-ea
 
 ### 12.3 Flex scope (cut in this order if behind; the plan slips rather than touching §12.2)
 1. Email invitations (owner creates users directly instead).
-2. Additional-language editing UI (the data model stays multilingual).
+2. Editing UI for more than two languages and side-by-side translation views (Arabic + English entry and display stay in scope; the full multi-language UI is required before the UAE launch).
 3. Rollback UI (keep the API endpoint).
 4. QR PDF print sheet (keep PNG/SVG).
 5. CSV export (keep JSON).
@@ -216,3 +220,22 @@ If weeks 1–8 overrun by more than two weeks, the AWS weeks move out rather tha
 
 ### 12.4 Moved to phase 2
 AI menu import (ADR-15, still the first AI capability, behind human review) and the Claude API integration, plus everything already listed in §8.
+
+**UAE launch readiness (after the US pilot):** UAE market pack verified (allergen scheme, halal/pork/alcohol rules, VAT display), full multi-language editing UI, UAE legal track (PDPL, Arabic notices), production environment (doc 04 §5.1).
+
+
+### 12.5 After week 12: pilot preparation, onboarding and the pilot (draft 2026-11-21; not part of the 12-week plan)
+
+**The 12-week plan ends with the AWS environment ready** (week 12). Everything below happens afterwards and is **not** counted in the 12 weeks.
+
+| Phase | What happens | Rough duration at ~20 h/week | Exit gate |
+|-------|--------------|------------------------------|-----------|
+| A. Pilot readiness | Safeguards G1–G11 from doc 04 §5.3, including **T1 tenant-scoped access policies (required)**; pilot-specific monitoring (synthetic checks, CloudFront log reports, support log) | 2–3 weeks | **G1–G11 done** and the doc 04 §5.3 assessment reviewed by the product owner |
+| B. Pilot legal (L-US) | Pilot terms (UAE storage and single-AZ disclosure), privacy notice, incident contact | Runs in parallel with A | **G12 done** |
+| C. Recruitment and onboarding | Recruit 5–10 US venues; onboard in small batches | 2–3 weeks (overlaps A–B; onboarding only after A and B) | ≥ 5 venues onboarded |
+| D. Pilot | 6–8 weeks with real venues and guests; weekly review of the core measures (doc 01 §11) | 6–8 weeks | End of pilot |
+| E. Evaluation | Core measures, interviews, go/no-go for UAE launch preparation | ~1 week | Decision by the product owner |
+
+**Required gates (draft):**
+- **Before onboarding any real pilot tenant:** T1 tenant-scoped DynamoDB access policies (doc 11 T1), plus safeguards G2–G12 (doc 04 §5.3).
+- **Before the UAE commercial launch:** an **external penetration test**, plus the UAE launch readiness items in §12.4 and the production topology (doc 04 §5.1).

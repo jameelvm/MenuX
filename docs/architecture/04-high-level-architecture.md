@@ -1,7 +1,7 @@
 # 04 — High-Level Architecture
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
-**Revision 0.3 (approved baseline):** two hostnames (§3); work items and outbox instead of SQS/Streams (ADR-18); publish flow rewritten with the per-menu lock, tenant guard, MANIFEST lease, UNPUBLISH, full-state rollback and cache table (§4.1); QR edge check (§4.2); sold-out overlay and AI in phase 2 (§4.3–4.4); region `us-east-1` proposed (§5.1); public-app amendments (§6.2); BFF (§6.5).
+**Revision 0.3 (DRAFT, pending approval — doc 13):** market packs and `me-central-1` (draft 2026-11-21); two hostnames (§3); work items and outbox instead of SQS/Streams (ADR-18); publish flow rewritten with the per-menu lock, tenant guard, MANIFEST lease, UNPUBLISH, full-state rollback and cache table (§4.1); QR edge check (§4.2); sold-out overlay and AI in phase 2 (§4.3–4.4); region `me-central-1` proposed (week-1 feasibility/service verification only; region decision before week 9) (§5.1); public-app amendments (§6.2); BFF (§6.5).
 Revision 0.2: fully static public path (§3, §4.2); authoritative publication pointer, publish state machine and failure handling (§4.1); public app hosting resolved, static prerendering vs. dynamic SSR (§6.2); .NET 10; production topology vs. learning environment (§5).
 
 ---
@@ -113,7 +113,7 @@ flowchart TB
 
 ## 4. Key runtime flows
 
-### 4.1 Publish flow and the authoritative publication pointer (Rev 0.3 baseline, ADR-10)
+### 4.1 Publish flow and the authoritative publication pointer (Rev 0.3 draft, ADR-10 proposed)
 
 #### Single source of truth
 The **authoritative record** of what is live is the Publishing table item `T#{t}#M#{m} / CURRENT` (the menu publication pointer). The location index items `T#{t}#L#{l} / PUB#{m}` are part of the same authoritative state and are **only written in the same transaction**. Key design: doc 07 §3.3.
@@ -233,7 +233,7 @@ Design kept for phase 2. Admin uploads a photo/PDF (stored at `t/{tenantId}/ai-i
 | Aspect | Recommendation [R] |
 |--------|--------------------|
 | AWS accounts | AWS Organizations: `management`, `security/log-archive`, `shared-services` (ECR, CI roles), `dev`, `staging`, `prod`. |
-| Region | US launch (ADR-17): **`us-east-1`** proposed [R]. CloudFront certificates and the CloudFront-scope WAF must live there anyway; confirm before week 9. Multi-AZ in production. |
+| Region | ADR-17 (draft): single environment in **`me-central-1`** (UAE) from week 9 for the US pilot and the UAE launch. Week 1: feasibility/service check only (no commitment); **region decision before week 9**. If anything is missing, the blocker and fallback (`us-east-1`) go to the product owner before the decision changes. Terraform region-parameterized; `tenants.home_region`; CloudFront certificate and WAF in `us-east-1` (AWS requirement). US pilot users are told their data is stored in the UAE. Multi-AZ in production. |
 | Network | VPC with public subnets (ALB, NAT) and private subnets (ECS, RDS). VPC endpoints for S3, DynamoDB, Secrets Manager, ECR to reduce NAT costs. |
 | Compute | ECS Fargate (API: min 2 tasks across AZs; Worker: autoscale on queue depth). |
 | CI/CD | GitHub Actions (assumed; confirm) using OIDC to assume AWS roles, no static keys. Build → test → container image to ECR → Terraform plan/apply → ECS rolling/blue-green deploy. |
@@ -246,10 +246,47 @@ Design kept for phase 2. Admin uploads a photo/PDF (stored at `t/{tenantId}/ai-i
 | Stage | Weeks | Environment |
 |-------|-------|-------------|
 | Local | 1–8 | Docker: PostgreSQL, DynamoDB Local, LocalStack (S3), Keycloak (OIDC), Mailpit. Same work-item pollers as in AWS (ADR-18). Details: doc 10 §4, §12. |
-| One AWS account | 9–12 | Same architecture as §3 with cost reductions: one environment, single-AZ RDS, Fargate in public subnets with tight security groups and no NAT Gateway, free gateway endpoints for S3/DynamoDB, budget alarms. **These are deliberate deviations from §5.1.** |
+| One AWS account | 9–12 | Region per ADR-17 (draft: `me-central-1`). Same architecture as §3 with cost reductions: one environment, single-AZ RDS, Fargate in public subnets with tight security groups and no NAT Gateway, free gateway endpoints for S3/DynamoDB, budget alarms. **These are deliberate deviations from §5.1.** Not accepted for real pilot data until the §5.3 assessment is reviewed. |
 | Production | Phase 2 | §5.1 topology. |
 
-## 6. Key trade-offs
+### 5.3 Learning environment with real pilot data — risk assessment (**DRAFT, NOT ACCEPTED**; draft 2026-11-21)
+
+The single-account learning environment (§5.2) was designed for learning, not for real tenants. Before any **real pilot data** is stored in it, the product owner reviews this assessment. **The current setup is not accepted for pilot data until then.**
+
+#### Risks
+
+| # | Deviation from §5.1 | Risk with real pilot data | Likelihood / impact |
+|---|---------------------|---------------------------|:-:|
+| E1 | One AWS account for experiments **and** pilot data | A learning experiment, an IAM mistake or a `terraform destroy` reaches pilot data | Medium / **High** |
+| E2 | Fargate tasks in public subnets (no NAT Gateway) | A security-group mistake exposes a task directly to the internet | Low / High |
+| E3 | Single-AZ RDS | An AZ or instance failure takes the admin portal down until restore (guest menus keep working: they're static on CloudFront) | Low / Medium |
+| E4 | Compute stack designed to be destroyable or scaled to zero | The admin portal is unavailable outside working hours, or removed by mistake | Medium / Medium |
+| E5 | PITR set to 7 days for learning (doc 08 §6) | Too short to notice and recover from silent data damage | Medium / Medium |
+| E6 | No separate staging: deploys go straight to the pilot environment | A broken deploy or migration hits pilot venues | Medium / Medium |
+| E7 | Tenant isolation enforced in the application only (until T1) | One code bug could expose another tenant's DynamoDB data | Low / **High** |
+| E8 | Detection services not defined for the learning environment | An intrusion or misuse goes unnoticed | Low / High |
+| E9 | No external pen test before the pilot | Unknown vulnerabilities (no payments or guest personal data reduce the impact) | Low / Medium |
+
+#### Minimum safeguards before real pilot data (proposed gate checklist)
+
+| Gate | Safeguard | Addresses | Effort (rough) |
+|------|-----------|-----------|----------------|
+| G1 | **T1: DynamoDB tenant-scoped access policies** (`LeadingKeys` session policies) in place and covered by tests | E7 | 2–3 days |
+| G2 | **Separate the pilot from experiments.** Recommended: a second AWS account (Organizations) for the pilot environment. Minimum: a separate Terraform state, with experiments never run against it | E1 | ½–1 day |
+| G3 | **Protect the data stack:** deletion protection on DynamoDB and RDS; `prevent_destroy` on data resources; PITR **35 days**; RDS backups ≥ 14 days; S3 versioning; a restore drill completed | E1, E5 | ½ day + drill |
+| G4 | **Network hardening:** task security groups accept traffic only from the ALB; RDS in private subnets with no public access; ECS Exec disabled (or audited); no SSH | E2 | ½ day |
+| G5 | **Availability:** scale-to-zero disabled during the pilot; at least 1 API task (2 recommended); single-AZ RDS **accepted only with disclosure** in the pilot terms | E3, E4 | Config |
+| G6 | **Access:** root MFA, IAM Identity Center, no long-lived keys, least-privilege task roles, CI deploys through OIDC | E1, E8 | Already planned |
+| G7 | **Detection:** CloudTrail, GuardDuty, budget alarms, alarms for 5xx, stuck work items and purge failures; 30-day log retention | E8 | ½ day |
+| G8 | **Deploy safety:** protected tests required in CI; rollback to the previous task definition documented and tried once; expand/contract migrations only | E6 | ½ day |
+| G9 | **Encryption and secrets:** KMS at rest everywhere, TLS everywhere, secrets only in Secrets Manager | — | Already planned |
+| G10 | **Focused security review** completed, with no open critical or high findings | E9 | 1 day |
+| G11 | **Runbooks:** publish stuck, purge failed, restore from backup, incident contact | E3, E6 | ½ day |
+| G12 | **Pilot legal (L-US):** pilot terms including UAE storage and single-AZ disclosure, privacy notice, incident contact | — | Outside engineering |
+
+**Residual risks that would be accepted for the pilot (only if you approve):** single-AZ database (E3), no external pen test before the pilot (E9; required before the UAE launch), no multi-region disaster recovery.
+
+**Cost notes:** a second AWS account is free; GuardDuty and CloudTrail cost little at this volume; Multi-AZ RDS roughly doubles database cost, which is why it's proposed for production only; private subnets with a NAT Gateway or interface endpoints add a fixed monthly cost (check current pricing).## 6. Key trade-offs
 
 ### 6.1 Modular monolith vs. microservices
 **Choose the modular monolith.** Microservices would add distributed transactions, service discovery and N deploy pipelines to a product that has neither the team size nor proven scale to justify them. The modules are designed so that the most likely candidates to split out later (Public read, Ordering, AI worker) can be extracted.
@@ -271,6 +308,7 @@ Design kept for phase 2. Admin uploads a photo/PDF (stored at `t/{tenantId}/ai-i
 - Shell requirements: inline critical CSS, skeleton UI, zoneless change detection, no heavy UI component library, strict bundle budgets enforced in CI, all text from JSON (no tenant data in the shell).
 - The admin portal is also a static CSR SPA (it needs no SEO), on its own hostname (X-5).
 - **Rev 0.3 amendments (ADR-05):** guest UI labels come from **runtime JSON dictionaries** loaded with the shell (Angular's compile-time i18n would need one build per locale); a supported-browser matrix that includes **in-app browsers** opened from camera and messaging apps; an architecture lint rule forbidding imports from admin libraries or large UI kits in the public project.
+- **Arabic and right-to-left (ADR-19, draft):** both apps support right-to-left from day one (CSS logical properties, `dir` per language, mirrored icons), with `en` + `ar` dictionaries and an Arabic web font inside the bundle budget; RTL and Arabic rendering are tested in CI.
 - Verify the exact Angular configuration names (output mode, per-route render modes) for the Angular version chosen at environment preparation (doc 10 §3).
 - **Revisit trigger:** if the reference low-end device fails NFR-PERF-01 in week 6, or SEO/link previews become a requirement → evaluate publish-time rendering first (it keeps static hosting); consider dynamic SSR last.
 
@@ -286,7 +324,7 @@ Design kept for phase 2. Admin uploads a photo/PDF (stored at `t/{tenantId}/ai-i
 ### 6.5 Cognito vs. self-hosted identity (e.g., ASP.NET Identity / Duende / Keycloak)
 - Cognito: managed, cheap at low volume, MFA built in. Customizing its UX is limited and migrating away from it later is hard.
 - **Recommend Cognito** for v1, unless enterprise SSO (SAML/OIDC per tenant) is a near-term requirement. In that case evaluate alternatives early (doc 11, U9). Locally, Keycloak stands in as the OIDC provider (ADR-06).
-- **Decided (Rev 0.3): BFF cookie session.** ASP.NET Core performs the OIDC code flow server-side and issues an HttpOnly, Secure, SameSite=Strict cookie on the admin hostname; the SPA never holds tokens. The app reads only `iss` + `sub`; identities are stored provider-neutrally (`idp_issuer`, `idp_subject`).
+- **Proposed (Rev 0.3 draft, pending approval): BFF cookie session.** ASP.NET Core performs the OIDC code flow server-side and issues an HttpOnly, Secure, SameSite=Strict cookie on the admin hostname; the SPA never holds tokens. The app reads only `iss` + `sub`; identities are stored provider-neutrally (`idp_issuer`, `idp_subject`).
 
 ### 6.6 Real-time for orders (future; out of MVP-1)
 Server-Sent Events from ASP.NET for the staff board (simple, works through ALB), with a Redis-free fan-out at first: one API instance per connection, polling PostgreSQL `LISTEN/NOTIFY` or a short-interval query. Revisit with ElastiCache or API Gateway WebSockets if connections grow beyond a few thousand.

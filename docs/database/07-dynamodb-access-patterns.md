@@ -2,7 +2,7 @@
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
 Applies to the accepted hybrid design in [06](06-hybrid-database-architecture.md) (ADR-03).
-**Revision 0.3 (approved baseline):** writer, upsert, key and outbox rules (§1 principles 10–14); Publishing table redesigned (§3.3: ACTIVEJOB, JOB#{ulid}, MANIFEST, TENANTGUARD, full-state VER, WorkIndex); Media table (§3.5, X-1); deletion procedure rewritten (§7, TI-1…TI-13); no Streams (ADR-18).
+**Revision 0.3 (DRAFT, pending approval — doc 13):** market packs, canonical allergen codes, halal/pork/alcohol fields, Arabic name normalization, schedule date overrides (draft 2026-11-21); writer, upsert, key and outbox rules (§1 principles 10–14); Publishing table redesigned (§3.3: ACTIVEJOB, JOB#{ulid}, MANIFEST, TENANTGUARD, full-state VER, WorkIndex); Media table (§3.5, X-1); deletion procedure rewritten (§7, TI-1…TI-13); no Streams (ADR-18).
 Revision 0.2: tenant enumeration and deletion fixed (§1 principle 9, §7 new); Publishing table redesigned around one authoritative publication pointer (§3.3); QR identifiers raised to 128 bits (§3.3.1); LeadingKeys pattern corrected (§4).
 
 ---
@@ -20,7 +20,7 @@ Revision 0.2: tenant enumeration and deletion fixed (§1 principle 9, §7 new); 
 9. **Every tenant-owned item carries `TENANT_PK` / `TENANT_SK`**, indexed by a keys-only `TenantIndex` GSI on every table. A Query matches exactly one partition key, so `PK = T#t` can never reach child partitions such as `T#t#M#m`. Tenant-wide enumeration always uses the TenantIndex (§7).
 10. **One writer (TI-2).** Every Put/Update/Delete, including transaction and batch members, goes through `DynamoItemWriter` in BuildingBlocks. SDK write calls elsewhere fail an architecture test. PartiQL is not used.
 11. **No accidental upserts (TI-1).** Every `UpdateItem` sets `TENANT_PK = if_not_exists(TENANT_PK, :tpk)` and `TENANT_SK = if_not_exists(TENANT_SK, :tsk)`. Updates of existing aggregates include `attribute_exists(PK)`. Intentional upserts (`MANIFEST`, `TENANTGUARD`, counters) are explicit writer options. `REMOVE` never names `PK`, `SK` or `TENANT_*`.
-12. **Key character rules (TI-7).** Table key segments use `[A-Za-z0-9_-]`; `#` and `|` are delimiters only. Slugs `^[a-z0-9]+(-[a-z0-9]+)*$`, ≤ 63 characters. No user text in table keys; table keys ≤ 1,024 bytes so `TENANT_SK` fits the GSI sort-key limit. GSI1 sort keys may contain normalized names truncated to 100 characters. The writer validates.
+12. **Key character rules (TI-7).** Table key segments use `[A-Za-z0-9_-]`; `#` and `|` are delimiters only. Slugs `^[a-z0-9]+(-[a-z0-9]+)*$`, ≤ 63 characters. No user text in table keys; table keys ≤ 1,024 bytes so `TENANT_SK` fits the GSI sort-key limit. GSI1 sort keys may contain names normalized per F6 (Unicode NFKC, case folding, Arabic rules: diacritics and tatweel removed, alef/ya/ta-marbuta variants unified) and truncated to 100 characters (code points, not bytes). The writer validates.
 13. **Transactional outbox and work items; no Streams or SQS in MVP-1 (ADR-18).** Events are `T#{t}#OUTBOX / EVT#{ulid}` items written in the same transaction as the change. Background work is items with a lease. Both are found through a sparse **`WorkIndex`** (GSI2: `GSI2PK = WORK#{type}[#{status}]`, `GSI2SK = {timestamp}`) on every module table, single shard (PUB-14), removed when the work is done.
 14. **Bulk pacing (TI-13).** Bulk writes are paced (≤ 200 items/s per tenant); alarm on GSI throttle events.
 
@@ -80,9 +80,9 @@ Revision 0.2: tenant enumeration and deletion fixed (§1 principle 9, §7 new); 
 
 | Entity | PK | SK | GSI1PK | GSI1SK | Notes |
 |--------|----|----|--------|--------|-------|
-| Item | `T#{tenantId}` | `ITEM#{itemId}` | `T#{tenantId}#ITEMSTATUS#{status}` | `{nameNormalized}#{itemId}` | Attributes: name{lang}, description{lang}, price (minor units) + currency, variants[], modifierGroupIds[], allergens[] (default scheme: FDA nine major allergens), dietary[], calories? (optional, pending L3), imageAssetId, status, version, updatedAt, updatedBy. `GSI1SK` name truncated to 100 characters |
+| Item | `T#{tenantId}` | `ITEM#{itemId}` | `T#{tenantId}#ITEMSTATUS#{status}` | `{nameNormalized}#{itemId}` | Attributes: name{lang}, description{lang}, price (minor units) + currency, variants[], modifierGroupIds[], allergens[] (**canonical codes**, shown through the market pack's scheme), dietary[], containsPork?, containsAlcohol?, halalStatus? (optional; rules pending UAE research), calories? (optional), imageAssetId, status, version, updatedAt, updatedBy. `GSI1SK` = name normalized per F6, truncated to 100 characters |
 | Modifier group | `T#{tenantId}` | `MODGRP#{groupId}` | — | — | options[] embedded (name{lang}, priceDelta), min/max selections |
-| Catalog settings | `T#{tenantId}` | `SETTINGS` | — | — | default language, enabled allergen scheme |
+| Catalog settings | `T#{tenantId}` | `SETTINGS` | — | — | marketPack, default language, supportedLanguages (incl. `ar`), allergenScheme (from the market pack; ADR-19, draft) |
 
 Pattern mapping:
 - C1 `GetItem(PK=T#t, SK=ITEM#i)`
@@ -101,7 +101,7 @@ Pattern mapping:
 
 | Entity | PK | SK | GSI1PK | GSI1SK | Notes |
 |--------|----|----|--------|--------|-------|
-| Menu header | `T#{tenantId}` | `MENU#{menuId}` | — | — | name{lang}, status (DRAFT/PUBLISHED/ARCHIVED), draftVersion, lastPublishedInfo (**display-only projection**; the authoritative pointer is in Publishing, §3.3), hasUnpublishedChanges, locationIds (set), schedule[], version |
+| Menu header | `T#{tenantId}` | `MENU#{menuId}` | — | — | name{lang}, status (DRAFT/PUBLISHED/ARCHIVED), draftVersion, lastPublishedInfo (**display-only projection**; the authoritative pointer is in Publishing, §3.3), hasUnpublishedChanges, locationIds (set), schedule {weekly windows, dateOverrides[]}, version |
 | Location assignment | `T#{tenantId}` | `LOCMENU#{locationId}#{menuId}` | — | — | written in the same transaction as the header's `locationIds` |
 | Menu meta (in menu partition) | `T#{tenantId}#M#{menuId}` | `META` | — | — | small copy: draftVersion (the concurrency anchor for the whole menu) |
 | Section | `T#{tenantId}#M#{menuId}` | `SEC#{sectionId}` | — | — | name{lang}, description{lang}, sortOrder, visibility |
@@ -120,7 +120,7 @@ Pattern mapping:
 
 **Why a separate menu partition (`T#t#M#m`) instead of putting sections in `T#t`:** M2 can load the whole draft in one query without reading the rest of the tenant, and all writes to one menu go to one partition. Menu headers stay in the tenant partition so M1 (list menus) is a single query. **Child partitions (`T#t#M#m`, `T#t#L#l`) can't be found by querying `PK=T#t`**, so tenant-wide enumeration uses the TenantIndex (§7), not parent items.
 
-### 3.3 Table `ms-{env}-publishing` (Rev 0.3 baseline)
+### 3.3 Table `ms-{env}-publishing` (Rev 0.3 draft)
 
 There is one authoritative publication record per menu (`CURRENT`). The location index items are written only in the same transaction. A per-menu `ACTIVEJOB` lock serializes PUBLISH, ROLLBACK and UNPUBLISH. Per-location `MANIFEST` state drives projection, and `TENANTGUARD` fences commits. Flow and failure handling: doc 04 §4.1.
 
@@ -197,7 +197,7 @@ Patterns: **MD1** get asset (`GetItem`); **MD2** create upload session (`PutItem
 4. ~~Price per location~~ — **Phase 2 (U3).** Would add per-location price maps or per-location snapshots.
 5. **Draft edit history / undo beyond published versions?** Not in MVP-1. Would need an event log (outbox → S3).
 
-## 7. Tenant data enumeration, export and deletion (Rev 0.3 baseline, ADR-09)
+## 7. Tenant data enumeration, export and deletion (Rev 0.3 draft, ADR-09 proposed)
 
 ### 7.1 Problem (Rev 0.1 flaw)
 A DynamoDB `Query` matches **exactly one partition key value**, and partition keys can't be matched with `begins_with`. `Query(PK = "T#t")` returns only the tenant root partition. It can't return items under `T#t#M#m`, `T#t#L#l` or `T#t#OUTBOX`, or the tenant's `QR#`/`ROUTE#` items. Deriving child keys from parent items fails with orphaned children, IDs owned elsewhere (locations live in PostgreSQL) and items in other tables.

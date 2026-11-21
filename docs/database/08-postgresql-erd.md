@@ -1,7 +1,7 @@
 # 08 — PostgreSQL Entity Relationship Design
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
-**Revision 0.3 (approved baseline):** provider-neutral identity (X-2); `tenants.plan_key` (U7); deletion-module leases (TI-10); retention per U13 (provisional); `ai` schema in phase 2.
+**Revision 0.3 (DRAFT, pending approval — doc 13):** `home_region`, `market_pack`, `locations.price_display` (draft 2026-11-21); provider-neutral identity (X-2); `tenants.plan_key` (U7); deletion-module leases (TI-10); retention per U13 (provisional); `ai` schema in phase 2.
 Revision 0.2: ordering/payments out of MVP-1 (design kept, schemas not created); PostgreSQL version verified at environment preparation; multiple locations accepted; tenant deletion tracking tables added.
 
 ---
@@ -78,12 +78,14 @@ erDiagram
 | legal_name | text | |
 | display_name | text | |
 | business_type | text CHECK (restaurant, hotel, cafe, shop, other) | [S] segments |
-| country_code | char(2) | drives allergen rules (launch: `US`) |
+| country_code | char(2) | selects the default market pack (pilot `US`, target `AE`) |
 | default_currency | char(3) | |
 | default_language | text (BCP-47) | |
-| supported_languages | text[] | [A] |
+| supported_languages | text[] | default + up to 4 (U5); Arabic and English supported end to end |
 | status | text CHECK (pending, active, suspended, pending_deletion, deleting, deleted) | |
 | plan_key | text NOT NULL DEFAULT 'pilot' | static plan limits from configuration (U7) |
+| market_pack | text NOT NULL | e.g., `us-pilot`, `ae` (ADR-19, draft) |
+| home_region | text NOT NULL | AWS region holding the tenant's data (ADR-17, draft) |
 | suspended_reason | text NULL | |
 | deletion_requested_at | timestamptz NULL | grace period |
 | created_at / updated_at | timestamptz | |
@@ -99,6 +101,7 @@ erDiagram
 | timezone | text (IANA) | needed for schedules |
 | address | jsonb | |
 | currency | char(3) | defaults from tenant |
+| price_display | jsonb | tax-inclusive flag, footnote text per language (FR-MENU-12; UAE VAT display to verify) |
 | status | text CHECK (active, inactive) | |
 | ordering_enabled | boolean | [A] |
 

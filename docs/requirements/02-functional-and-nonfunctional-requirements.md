@@ -2,7 +2,7 @@
 
 Tags: [S] stated · [D] derived · [A] assumption, needs confirmation · [R] recommendation
 Priority (MoSCoW) is **proposed** and applies only to items tagged [S]/[D]. Items tagged [A] have no priority until confirmed.
-**Revision 0.3 (approved baseline, 2026-11-21):** priorities set from the U3–U7/U11 decisions; unpublish added (FR-MENU-10); AI, billing, analytics and platform console in phase 2; US market NFRs; protected tests (NFR-OPS-07).
+**Revision 0.3 (DRAFT, pending approval — doc 13):** market split — US pilot → UAE commercial launch, market packs, Arabic/RTL, FR-CAT-09, FR-MENU-12 (draft 2026-11-21); priorities set from the U3–U7/U11 decisions; unpublish added (FR-MENU-10); AI, billing, analytics and platform console in phase 2; US market NFRs; protected tests (NFR-OPS-07).
 Revision 0.2: multiple locations (FR-TEN-04, FR-MENU-05) accepted; food-first catalogue; FR-AI-01 first proposed AI capability; FR-ORD/FR-PAY out of MVP-1; QR entropy and rate limiting (NFR-SEC); environment and version notes.
 
 ---
@@ -25,11 +25,12 @@ Revision 0.2: multiple locations (FR-TEN-04, FR-MENU-05) accepted; food-first ca
 | FR-CAT-01 | Create, edit, archive menu items (name, description, price, image). | [S] | Must |
 | FR-CAT-02 | Items can have variants or sizes (e.g., small/large). | [S] MVP-1 scope (doc 12 §8) | Must |
 | FR-CAT-03 | Items can have modifier groups (e.g., "choose a sauce", min/max choices, price deltas). | [S] MVP-1 scope | Must |
-| FR-CAT-04 | Items carry allergen and dietary tags. Default tag set: FDA's nine major food allergens (US launch). | [S] MVP-1 scope; legal review L3 | Must |
+| FR-CAT-04 | Items carry allergen and dietary tags as **canonical codes**, displayed through the allergen scheme of the tenant's market pack (US pilot: FDA nine major allergens; UAE: GSO/Codex-based, to verify). No scheme is hard-coded. | [S] MVP-1 scope; ADR-19 (draft) | Must |
 | FR-CAT-05 | One item can be reused across several menus, with per-menu price or visibility overrides. **Location-specific prices: phase 2.** | [S] U3 | Must |
-| FR-CAT-06 | Item content in several languages: multilingual data model; default language plus up to 4 more, entered manually; no AI translation in MVP-1. | [S] U5 | Must (data model); additional-language UI is flex scope |
-| FR-CAT-07 | Prices in the tenant's currency (USD default); one currency per tenant. | [D] US market | Must |
-| FR-CAT-08 | Optional calorie value per item/variant. | [A] pending L3 (US menu labeling for chains with 20+ locations) | Could (data field only) |
+| FR-CAT-06 | Item content in several languages: multilingual data model; default language plus up to 4 more, entered manually; no AI translation in MVP-1. **Arabic + English work end to end in MVP-1** (entry, storage, display, right-to-left). | [S] U5, P14 (draft) | Must; editing UI for more than two languages is flex scope for the 12 weeks and required before the UAE launch |
+| FR-CAT-07 | Prices in the tenant's currency, defaulted from the market pack (US pilot USD; UAE AED, 100 fils); one currency per tenant; stored in minor units. | [D] ADR-19 (draft) | Must |
+| FR-CAT-08 | Optional calorie value per item/variant. | [A] pending legal research (US and UAE tracks) | Could (data field only) |
+| FR-CAT-09 | Optional structured attributes `containsPork`, `containsAlcohol`, `halalStatus` on items/variants; exact rules and display requirements pending UAE research. | [A] UAE target market (draft) | Should (optional fields in MVP-1) |
 
 Rev 0.2 (ADR-14): the catalogue targets **food and beverage menus**. General retail inventory (SKUs, stock levels, barcodes, variant matrices) is out of the first release.
 
@@ -41,12 +42,13 @@ Rev 0.2 (ADR-14): the catalogue targets **food and beverage menus**. General ret
 | FR-MENU-03 | Edits are saved as a draft; publishing makes them visible to customers. | [R] | Must |
 | FR-MENU-04 | Keep published versions (last 50); roll back to the full published state of a previous version (content, schedule, locations). | [R] | Must (API); rollback UI is flex scope |
 | FR-MENU-05 | Assign menus to locations. Assignment takes effect when the menu is next published. | [D] from Rev 0.2 #8 | Must |
-| FR-MENU-06 | Schedule menus with weekly time windows in the location's timezone. | [S] U6 | Must |
+| FR-MENU-06 | Schedule menus with weekly time windows in the location's timezone **plus date-range overrides** (e.g., Ramadan iftar/suhoor menus, holidays). | [S] U6, P15 (draft) | Must |
 | FR-MENU-07 | Mark an item unavailable ("86'd") immediately, without a full republish. | [S] U6 | **Phase 2.** MVP-1: `soldOut` flag on the placement, visible after publish (< 60 s) |
 | FR-MENU-08 | Preview the customer view before publishing. | [D] | Should |
 | FR-MENU-09 | Two editors cannot silently overwrite each other's changes. | [D] | Must |
 | FR-MENU-10 | Take a live menu offline (unpublish); required before archiving or deleting a live menu. Only one publish/rollback/unpublish per menu at a time. | [D] ADR-10 | Must |
 | FR-MENU-11 | No publish approval workflow; publishing is controlled by the `menu.publish` permission. | [S] U11 | Must |
+| FR-MENU-12 | Price-display policy per location: tax-inclusive flag and footnote text per language (e.g., US pre-tax prices; UAE VAT-inclusive with service-charge notes, to verify). | [D] ADR-19 (draft) | Must |
 
 ### FR-MEDIA — Media
 | ID | Requirement | Tag | Priority |
@@ -165,7 +167,7 @@ See [09-security-and-multitenancy.md](../architecture/09-security-and-multitenan
 | ID | Requirement | Tag |
 |----|-------------|-----|
 | NFR-PRIV-01 | Personal data inventory; collect as little as possible (public menu collects no personal data). | [D] |
-| NFR-PRIV-02 | Data residency: data stored in a US AWS region (US launch, ADR-17); US state privacy laws reviewed (L5). | [S] Rev 0.3 |
+| NFR-PRIV-02 | Data residency: single environment in `me-central-1` (UAE) if confirmed by the region decision before week 9 (ADR-17, Proposed; week-1 feasibility check only). US pilot users are told their data is stored in the UAE. Legal tracks: US pilot and UAE launch (UAE PDPL). | [S] C4 (draft) |
 | NFR-PRIV-03 | Tenant data export and deletion. | [D] |
 | NFR-PRIV-04 | PCI DSS scope kept to SAQ A (hosted payment pages) if payments are in scope. | [R] |
 | NFR-PRIV-05 | Sub-processor disclosure (AWS, Anthropic, PSP, email provider). | [D] |
@@ -173,9 +175,9 @@ See [09-security-and-multitenancy.md](../architecture/09-security-and-multitenan
 ### 2.6 Accessibility and usability
 | ID | Requirement |
 |----|-------------|
-| NFR-ACC-01 | Public menu meets WCAG 2.2 AA. For the US launch, ADA Title III expectations are reviewed (L4). |
+| NFR-ACC-01 | Public menu meets WCAG 2.2 AA in every supported language, including right-to-left layouts. |
 | NFR-ACC-02 | Admin portal WCAG 2.2 AA target. |
-| NFR-ACC-03 | Public menu supports right-to-left (RTL) languages if Arabic/Hebrew markets are targeted. [A] |
+| NFR-ACC-03 | **Must (draft 2026-11-21):** public app and admin portal support right-to-left languages from day one (UAE target market): CSS logical properties, per-language text direction, mirrored icons, Arabic web font within the performance budget, RTL tests in CI. |
 
 ### 2.7 Maintainability and operability
 | ID | Requirement |

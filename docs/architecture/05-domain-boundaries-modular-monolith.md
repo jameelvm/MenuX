@@ -1,7 +1,7 @@
 # 05 — Domain Boundaries and Modular Monolith Design
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
-**Revision 0.3 (approved baseline):** Media gets its own table (X-1); integration events via transactional outbox polled by the worker, no SQS/Streams (ADR-18); `MenuPublicationCommitted`/`MenuLive` events; AI Assist in phase 2.
+**Revision 0.3 (DRAFT, pending approval — doc 13):** Media gets its own table (X-1); integration events via transactional outbox polled by the worker, no SQS/Streams (ADR-18); `MenuPublicationCommitted`/`MenuLive` events; AI Assist in phase 2.
 Revision 0.2: Catalog/Menu split accepted (ADR-07); Publishing owns the authoritative publication pointer and public projections; Tenancy orchestrates tenant deletion; new and changed integration events; ordering/payments not built in MVP-1.
 
 ---

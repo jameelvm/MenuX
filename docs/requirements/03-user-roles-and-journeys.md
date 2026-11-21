@@ -1,7 +1,7 @@
 # 03 — User Roles and User Journeys
 
 Tags: [S] stated · [D] derived · [A] assumption, needs confirmation · [R] recommendation
-**Revision 0.3 (approved baseline):** open questions resolved (U4, U11); J3 per-menu publish lock, full-state rollback, unpublish; J6 sold-out via publish (overlay in phase 2); J2a in phase 2.
+**Revision 0.3 (DRAFT, pending approval — doc 13):** open questions resolved (U4, U11); J3 per-menu publish lock, full-state rollback, unpublish; J6 sold-out via publish (overlay in phase 2); J2a in phase 2.
 Revision 0.2: J1 creates locations (multiple supported); J2a marked as the first proposed AI capability; J5 updated for the fully static public path; J7–J8 out of MVP-1.
 
 ---
@@ -19,7 +19,7 @@ Revision 0.2: J1 creates locations (multiple supported); J2a marked as the first
 | **Platform Support** | Read-only tenant access for support, time-limited and logged. | [D] | Yes, MFA, SSO |
 | **System actors** | Payment provider webhooks, AI worker, schedulers. | [D] | Machine credentials |
 
-**Decisions (Rev 0.3):**
+**Proposed decisions (Rev 0.3 draft, pending approval):**
 - **No publish approval workflow** in MVP-1 (U11). Control comes from the `menu.publish` permission; a `PENDING_APPROVAL` step can be added later.
 - **No level above tenants** in MVP-1 (U4). A chain is one tenant with many locations; hotel outlets are locations.
 - Customers don't log in in MVP-1.
@@ -69,7 +69,7 @@ sequenceDiagram
 ```
 Acceptance points:
 - A tenant is created **only after** email verification, which limits spam signups.
-- Country, currency, timezone and default language are captured at signup because they drive prices, schedules and allergen rules. [D]
+- Country is captured at signup and selects the **market pack** (currency, languages and text direction, allergen scheme, price display; ADR-19, draft). Timezone and default language are captured too. [D]
 - The guided setup creates the first location. More locations can be added at any time (ADR-13). Each location has its own timezone and URL slug.
 - **Open:** self-serve signup or sales-led? Free trial? Card required at signup? [A]
 

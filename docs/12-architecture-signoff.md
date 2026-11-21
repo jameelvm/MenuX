@@ -2,7 +2,7 @@
 
 Revision **0.3 (draft for approval)** · Date: 2026-11-19 · Source of truth reviewed: Rev 0.2 documents 01–11.
 
-> **Approved 2026-11-21** with no exceptions (doc 13) and applied in the **Rev 0.3 baseline** (doc 14). This document is kept unchanged below as the review record. Where the baseline refined a recommendation while applying it (no SQS, no Streams, MANIFEST lease instead of FIFO; doc 14 §3), docs 01–11 are authoritative.
+> **Not yet approved.** Correction 2026-11-21: an earlier session note recorded this review as approved; the product owner has stated that approval was not explicitly given, so it is treated as **unconfirmed**. The recommendations have been drafted into docs 01–11 as the **Rev 0.3 draft** (summary: doc 14) pending explicit confirmation (doc 13).
 >
 > Original status at review time: proposal only. **No ADR status has been changed.** Accepted decisions (ADR-01, 02, 03, 07, 12, 13, 14, 16) are not altered. The changes recommended here for the *proposed* ADRs are marked in the affected documents with a "⚠ Sign-off review" note and are only applied to the designs once approved. **Application implementation must not start until the decisions in §10 are approved.**
 

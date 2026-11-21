@@ -14,12 +14,12 @@ Menu Studio is a multi-tenant SaaS platform where US food businesses (restaurant
 
 | Item | State |
 |------|-------|
-| Phase | **Rev 0.3 architecture baseline approved and published (2026-11-21).** Ready for implementation kickoff. |
-| Application code | **Not started.** Start week 1 only when the user gives the go-ahead. |
-| Plan | `docs/10-implementation-roadmap.md` §12 (12 weeks: local MVP-1 in weeks 1–8, first AWS environment in weeks 9–12) |
-| Kickoff checklist | `docs/14-rev-0.3-baseline-and-kickoff.md` §6 |
+| Phase | **Week 1 approved (W1–W3, 2026-11-21)**; Rev 0.3 architecture (C1) and roadmap beyond week 1 (C5) still open. Later weeks gated by doc 13 §1c. |
+| Application code | Not started. Week-1 foundation work may begin (scope: doc 14 §6; plain Docker Compose; no running AWS application resources; no real tenant data). |
+| Plan | Proposed: `docs/10-implementation-roadmap.md` §12 (not yet approved) |
+| Kickoff checklist | Draft: `docs/14-rev-0.3-baseline-and-kickoff.md` §6 |
 | Repo folders | `docs/` (complete), `src/backend`, `src/frontend`, `infrastructure/terraform`, `tests/` (empty) |
-| Git | Not a git repository yet (first kickoff item) |
+| Git | Repository `https://github.com/jameelvm/MenuX.git`, branch `main`; first commit `c57b5ab` (Rev 0.3 baseline) |
 
 ## 3. Session history
 
@@ -33,12 +33,20 @@ Menu Studio is a multi-tenant SaaS platform where US food businesses (restaurant
 | 6 | 2026-11-21 | Provisional agreement recorded; doc 13 (decision confirmation) created. |
 | 7 | 2026-11-21 | U12: ~20 h/week; learning priorities; AI → phase 2; protected tests rule; roadmap doc 10 §12. |
 | 8 | 2026-11-21 | **Formal approval:** P1–P21 (no exceptions), launch market **United States**, roadmap §12. Applied all doc 13 §4 changes across docs 01–11. ADR-04/05/06/08/09/10/11/15 → Accepted. Added ADR-17 (US market; `us-east-1` proposed) and ADR-18 (work items + outbox; no SQS/Streams). Created doc 14 (baseline + final kickoff checklist). Removed all "⚠ Sign-off review" notes. Updated README revision history, `CLAUDE.md` gate. |
+| 9 | 2026-11-21 | `git init` (branch `main`), `.gitignore`, `.gitkeep` placeholders; first commit `c57b5ab` pushed to `https://github.com/jameelvm/MenuX.git`. `PROJECT-CONTEXT.md` and `chatgptprompttoresume.txt` are the user's own files; leave them as they are. |
+| 10 | 2026-11-21 | **Correction:** the user stated the US launch market, P1–P21 and doc 10 §12 were not explicitly approved. Reverted ADR-04/05/06/08/09/10/11/15 to Proposed; ADR-17 and ADR-18 Proposed; doc 14 and all Rev 0.3 markers marked draft; doc 12/13 status corrected; C1, C4, C5 reopened; correction recorded in the README revision history. Not committed yet (GitHub `c57b5ab` still shows "approved" wording). |
+| 11 | 2026-11-21 | User input (not yet a decision): **long-term target market UAE; validate the MVP with US restaurants first (pilot), then launch commercially in the UAE.** Claude presented proposed changes (C4, ADR-17 rewrite, new ADR-19, P2/P14/P15, F6/F7, docs, roadmap) and the US-vs-UAE risk analysis in chat. |
+| 12 | 2026-11-21 | User chose **"Yes, Option B"** (via question prompt): applied items 1–7 as **local drafts** — C4 draft (US pilot / UAE target), ADR-17 rewritten (`me-central-1` conditional on week-1 check, UAE storage disclosed) and ADR-19 added (market packs), both **Proposed**; P2/P14/P15, F6/F7 revised; FR-CAT-09 (halal/pork/alcohol optional), FR-MENU-12 (price display), NFR-ACC-03 RTL Must; `tenants.market_pack`/`home_region`, `locations.price_display`; roadmap §12 adjusted (~3–5 days, protected tests not squeezed); legal tracks split US pilot / UAE launch; README draft row. C1 and C5 still unconfirmed. **Not committed.** |
+| 13 | 2026-11-21 | Added **proposed** US pilot success criteria (doc 01 §11: S1–S14 + decision rule, not approved); added an explicit note to doc 10 §12.2 that the protected tests are unchanged by localization work. Presented the C1/C5 review checklist in chat (flagged: pilot = real tenants vs "before real tenants" items; pilot not scheduled in the 12 weeks; learning-environment deviations). Local drafts only. |
+| 14 | 2026-11-21 | Drafts: T1 = required gate before any real pilot tenant; external pen test = required gate before UAE commercial launch (docs 09, 10 §8, 11 T1, 14). Learning-environment risk assessment E1–E9 + safeguards G1–G12 (doc 04 §5.3, **not accepted**). Post-week-12 schedule (doc 10 §12.5: readiness → legal → onboarding → 6–8-week pilot → evaluation). Pilot criteria reviewed → 6 core measures CM1–CM6, diagnostics, gates, UAE validation track (doc 01 §11, proposed). C1, C5, statuses unchanged; not committed. |
+| 15 | 2026-11-21 | Decision list narrowed to week-1 blockers. **User confirmed W1** (week 1 may start while C1/C5 open), **W2** (week-1 scope only; no running AWS app resources, no real tenant data), **W3** (plain Docker Compose). Recorded in CLAUDE.md, doc 10 §12 note + §4, doc 11 C.0 + T3, doc 13 §1b–§1c (gates by week), doc 14 header + §6, README. No ADR status changed. Awaiting approval to commit/push. |
 
 ## 4. Decisions
 
-- **Accepted:** ADR-01 … ADR-16, ADR-18; ADR-17 market (United States).
-- **Proposed:** ADR-17 region `us-east-1` (confirm before week 9).
-- **Refinements made while applying the approval (doc 14 §3, F1–F7):** no SQS (work items + leases); manifest builds serialized by a MANIFEST lease (FIFO removed, PUB-2 resolved); no DynamoDB Streams (transactional outbox items); 90 locations per menu; explicit intentional upserts; GSI1 name truncation; US defaults (USD, en-US, FDA nine allergens, optional calories field).
+- **Accepted (Rev 0.2):** ADR-01, 02, 03, 07, 12, 13, 14, 16.
+- **Proposed, pending confirmation:** ADR-04, 05, 06, 08, 09, 10, 11, 15, 17 (US pilot → UAE launch; `me-central-1` proposed, region decision before week 9), 18, 19 (market packs); P1–P21; roadmap doc 10 §12.
+- **Market strategy (draft, user input 2026-11-21):** US = pilot/validation market; UAE = target commercial launch market.
+- **Draft refinements awaiting approval (doc 14 §3, F1–F7):** no SQS (work items + leases); manifest builds serialized by a MANIFEST lease (FIFO removed, PUB-2 resolved); no DynamoDB Streams (transactional outbox items); 90 locations per menu; explicit intentional upserts; GSI1 name truncation; US defaults (USD, en-US, FDA nine allergens, optional calories field).
 
 ## 5. Open items (none blocks week 1)
 
@@ -49,8 +57,8 @@ Menu Studio is a multi-tenant SaaS platform where US food businesses (restaurant
 
 ## 6. Next steps
 
-1. Wait for the user's go-ahead for week 1.
-2. Week 1 per doc 14 §6: `git init`, version verification (`docs/architecture/versions.md`), library licences, .NET 10 solution skeleton + architecture tests, docker compose (PostgreSQL, DynamoDB Local, LocalStack S3, Keycloak, Mailpit), GitHub Actions CI, Angular workspace (`admin`, `public`), AWS hardening + budget alarms + Terraform state bucket.
+1. Wait for explicit approval to commit/push the current drafts. Then start week 1 when the user says go (doc 14 §6). Before week 2, get the week-2 decisions in doc 13 §1c (C5, ADR-06, ADR-18, U4, U7) — each answered separately.
+2. Week 1 per doc 14 §6 (git setup already done): version verification (`docs/architecture/versions.md`), library licences, .NET 10 solution skeleton + architecture tests, docker compose (PostgreSQL, DynamoDB Local, LocalStack S3, Keycloak, Mailpit), GitHub Actions CI, Angular workspace (`admin`, `public`), AWS hardening + budget alarms + Terraform state bucket.
 3. Update this file at the end of each week.
 
 ## 7. Key files
@@ -59,7 +67,7 @@ Menu Studio is a multi-tenant SaaS platform where US food businesses (restaurant
 |------|---------------|
 | `docs/14-rev-0.3-baseline-and-kickoff.md` | Baseline summary, refinements F1–F7, final MVP-1 scope, open items, kickoff checklist |
 | `docs/11-architecture-review-and-open-questions.md` | ADR register (01–18), missing requirements, decision status |
-| `docs/10-implementation-roadmap.md` | §12 approved plan, protected tests (§12.2), flex scope (§12.3) |
+| `docs/10-implementation-roadmap.md` | §12 proposed plan (pending C5; only week 1 approved under W2), protected tests (§12.2), flex scope (§12.3) |
 | `docs/architecture/04` | HLD; publish flow §4.1; QR resolution §4.2; hosting §6.2 |
 | `docs/database/07` | DynamoDB principles, tables (catalog, menus, publishing, media), TenantIndex and deletion §7 |
 | `docs/database/06`, `08` | Hybrid DB, outbox/work items; PostgreSQL ERD and retention |

@@ -1,7 +1,7 @@
 # 06 — Hybrid Database Architecture
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
-**Revision 0.3 (approved baseline):** media table (X-1); outbox without Streams and work items without SQS (§5, ADR-18); manifest TTL 30 s and snapshot retention (§6); retention per U13 (provisional); deletion lifecycle (§9).
+**Revision 0.3 (DRAFT, pending approval — doc 13):** media table (X-1); outbox without Streams and work items without SQS (§5, ADR-18); manifest TTL 30 s and snapshot retention (§6); retention per U13 (provisional); deletion lifecycle (§9).
 Revision 0.2: hybrid design **accepted** (§1, §2.5); authoritative state vs. projections (§3, §4, §6); tenant data lifecycle (§9); local development (§8).
 
 ---

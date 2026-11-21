@@ -1,7 +1,7 @@
 # 09 — Security and Multi-Tenancy Strategy
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
-**Revision 0.3 (approved baseline):** work items instead of SQS (§2); BFF decided (§3); S3 tenant-prefixed layout and version purge (§4.4); QR edge check, WAF in `us-east-1`, alarm-only miss detection (§4.6); AI constraints in phase 2 (§6); US privacy (§8).
+**Revision 0.3 (DRAFT, pending approval — doc 13):** US pilot / UAE launch privacy tracks and `me-central-1` (draft 2026-11-21); work items instead of SQS (§2); BFF decided (§3); S3 tenant-prefixed layout and version purge (§4.4); QR edge check, WAF in `us-east-1`, alarm-only miss detection (§4.6); AI constraints in phase 2 (§6); US privacy (§8).
 Revision 0.2: no public API in MVP-1 (§2); local OIDC (§3); purge role and TenantIndex access (§4.3); QR identifiers (§4.5) and rate limiting (§4.6) added; enumeration threat (§9).
 
 ---
@@ -49,7 +49,7 @@ Alternative considered: putting `tenant_id` as a custom claim in the token (Cogn
 | Local development (Rev 0.2) | A Keycloak container acts as the OIDC provider, with test realms (users in two tenants, every role). The API validates standard OIDC/JWT only, so switching to Cognito is configuration (doc 10). Keycloak is never deployed. |
 | Enterprise SSO per tenant [A] | Cognito supports SAML/OIDC IdPs per user pool. Per-tenant IdPs at scale is awkward → revisit if required. |
 
-Token handling for the SPA [R]: short-lived access tokens (≤ 15 min), refresh token rotation. Prefer a **Backend-for-Frontend (BFF)** cookie session (HttpOnly, Secure, SameSite=Strict) over storing tokens in browser storage. This removes token theft through XSS. The trade-off is a small amount of BFF code in the ASP.NET host. **Decided (Rev 0.3): BFF.** The cookie is scoped to the admin hostname; the public hostname sets no cookies (X-5).
+Token handling for the SPA [R]: short-lived access tokens (≤ 15 min), refresh token rotation. Prefer a **Backend-for-Frontend (BFF)** cookie session (HttpOnly, Secure, SameSite=Strict) over storing tokens in browser storage. This removes token theft through XSS. The trade-off is a small amount of BFF code in the ASP.NET host. **Proposed (Rev 0.3 draft, pending approval): BFF.** The cookie is scoped to the admin hostname; the public hostname sets no cookies (X-5).
 
 ## 4. Authorization and data isolation (defense in depth)
 
@@ -85,7 +85,7 @@ CREATE POLICY tenant_isolation ON ordering.orders
   ```json
   { "Condition": { "ForAllValues:StringLike": { "dynamodb:LeadingKeys": ["T#<tenantId>", "T#<tenantId>#*"] } } }
   ```
-- Trade-off: `AssumeRole` per tenant adds latency/complexity. Cache scoped credentials per tenant for their lifetime (e.g., 15 min). **MVP option:** start with L3 application enforcement plus cross-tenant tests, and add LeadingKeys session policies in phase 2, **before real tenants** (doc 11 T1).
+- Trade-off: `AssumeRole` per tenant adds latency/complexity. Cache scoped credentials per tenant for their lifetime (e.g., 15 min). **MVP option:** start with L3 application enforcement plus cross-tenant tests, and add LeadingKeys session policies as a **required gate before onboarding any real pilot tenant** (draft; doc 11 T1, doc 10 §12.5).
 - The patterns must match exactly `T#<tenantId>` or `T#<tenantId>#*` (separator boundary included; corrected in Rev 0.2).
 - Items whose partition key doesn't start with the tenant (`QR#`, `ROUTE#`) are written and read only by the Publishing module's role and projection builder.
 - The **TenantIndex** GSI (doc 07 §7) can be queried only by the dedicated **purge/export worker role**. The API role has no permission on it. Purge runs are audited.
@@ -163,7 +163,7 @@ Rev 0.3 constraints: uploaded sources at `t/{tenantId}/ai-inputs/…` with a 30-
 - Public menu: no cookies, no personal data. Scan analytics come from CDN logs with **IP truncated** before storage.
 - Tenant users: email, name. Guests (if ordering): name/phone optional, minimized, retention-limited.
 - Data subject requests: export and delete per user; tenant-level export (menus as JSON/CSV).
-- Data residency: **US launch** (ADR-17); data stored in a US region (`us-east-1` proposed). US state privacy laws, the privacy policy and the sub-processor list are legal research item L5.
+- Markets (draft, ADR-17/19): **US pilot, then UAE commercial launch.** Data stored in **`me-central-1`** if confirmed by the region decision before week 9 (ADR-17, Proposed; week-1 feasibility check only); US pilot users are told their data is stored in the UAE. Two legal tracks: **US pilot** (pilot terms, privacy notice, state-law applicability) and **UAE launch** (Federal Decree-Law 45/2021 PDPL and its executive regulations; DIFC/ADGM rules if the company is set up there; cross-border transfers to sub-processors; Arabic notices). A sub-processor register records where each one processes data.
 
 ## 9. Threat model summary (STRIDE, top items)
 | Threat | Example | Mitigation |
