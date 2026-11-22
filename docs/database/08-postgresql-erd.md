@@ -11,7 +11,7 @@ Revision 0.2: ordering/payments out of MVP-1 (design kept, schemas not created);
 |--------|--------|--------|
 | `tenancy` | Tenancy & Org | Needed regardless [D] |
 | `identity` | Identity & Access | Needed regardless [D] |
-| `billing` | Subscription Billing | **Deferred** (U7). MVP-1 uses `tenants.plan_key` + static limits in configuration. |
+| `billing` | Subscription Billing | **Deferred beyond MVP-1** (U7, approved 2026-11-21; Stripe later). MVP-1 uses `tenants.plan_key` + static limits in configuration; the plan keys used now become `billing.plans.key` values later. |
 | `ordering` | Ordering | **Out of MVP-1 (Rev 0.2, ADR-12).** Design kept; schema not created until that phase. |
 | `payments` | Payments | **Out of MVP-1 (Rev 0.2, ADR-12).** Design kept; schema not created until that phase. |
 | `ai` | AI usage ledger | **Phase 2** (created with AI menu import) |
@@ -83,7 +83,7 @@ erDiagram
 | default_language | text (BCP-47) | |
 | supported_languages | text[] | default + up to 4 (U5); Arabic and English supported end to end |
 | status | text CHECK (pending, active, suspended, pending_deletion, deleting, deleted) | |
-| plan_key | text NOT NULL DEFAULT 'pilot' | static plan limits from configuration (U7) |
+| plan_key | text NOT NULL DEFAULT 'pilot' | static plan limits from configuration (U7, approved 2026-11-21). When billing is introduced, `plan_key` matches `billing.plans.key` and `billing.subscriptions` links tenant ↔ plan (§4.3) |
 | market_pack | text NOT NULL | e.g., `us-pilot`, `ae` (ADR-19, draft) |
 | home_region | text NOT NULL | AWS region holding the tenant's data (ADR-17, draft) |
 | suspended_reason | text NULL | |
@@ -122,7 +122,7 @@ erDiagram
 |--------|------|-------|
 | job_id | uuid FK → tenant_deletion_jobs | PK (job_id, module) |
 | module | text | catalog, menus, publishing, media, ai, identity, ... |
-| status | text CHECK (pending, running, verifying, done, failed) | Claimed by workers with `FOR UPDATE SKIP LOCKED` |
+| status | text CHECK (pending, running, verifying, done, failed) | Claimed by the worker that receives the module's SQS task (conditional update + lease; ADR-18) |
 | lease_owner, lease_until | text, timestamptz NULL | Crash recovery: an expired lease can be reclaimed |
 | attempts, next_attempt_at | int, timestamptz | Supervisor retry with backoff; alarm after 3 failures |
 | verify_after | timestamptz NULL | 30-minute and 24-hour verification passes |

@@ -1,7 +1,7 @@
 # 05 — Domain Boundaries and Modular Monolith Design
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
-**Revision 0.3 (DRAFT, pending approval — doc 13):** Media gets its own table (X-1); integration events via transactional outbox polled by the worker, no SQS/Streams (ADR-18); `MenuPublicationCommitted`/`MenuLive` events; AI Assist in phase 2.
+**Revision 0.3 (DRAFT, pending approval — doc 13):** Media gets its own table (X-1); integration events and background jobs via transactional outbox relay to Amazon SQS, no Streams (ADR-18, accepted 2026-11-21); `MenuPublicationCommitted`/`MenuLive` events; AI Assist in phase 2.
 Revision 0.2: Catalog/Menu split accepted (ADR-07); Publishing owns the authoritative publication pointer and public projections; Tenancy orchestrates tenant deletion; new and changed integration events; ordering/payments not built in MVP-1.
 
 ---
@@ -50,7 +50,7 @@ flowchart LR
 | **Catalog** | Items, variants, modifier groups, allergens/dietary tags, translations | DynamoDB `catalog` table | item, variant, modifier, allergen |
 | **Menu Authoring** | Menus, sections, item placements and overrides, schedules, location assignment, draft versioning, sold-out state | DynamoDB `menus` table | menu, section, placement, draft |
 | **Publishing & QR** | **Authoritative publication pointer** per menu, publish jobs, published versions, snapshot build, QR codes and routes (authoritative items), **public projections** (location manifests, QR/route files), reconciler, CDN invalidation | DynamoDB `publishing` table (authoritative) + S3 (projections) | publication pointer, version, snapshot, manifest, route, QR code |
-| **Media** | Upload sessions, image metadata, processing pipeline (work items), quotas | DynamoDB `media` table (Rev 0.3, X-1) + S3 | asset, rendition |
+| **Media** | Upload sessions, image metadata, processing pipeline (SQS `media` queue), quotas | DynamoDB `media` table (Rev 0.3, X-1) + S3 | asset, rendition |
 | **AI Assist** (phase 2) | AI jobs, suggestions, prompt templates & versions, usage metering | DynamoDB `ai` table + PostgreSQL (`ai_usage` ledger) | job, suggestion, acceptance |
 | **Ordering*** | Carts (server-side validation), orders, order lines, status workflow | PostgreSQL | order, line, ticket |
 | **Payments*** | Payment intents, captures, refunds, PSP webhooks, ledger | PostgreSQL | payment, refund, ledger entry |
@@ -69,10 +69,10 @@ src/backend/
   MenuX.sln
   src/
     Host.Api/                     # ASP.NET Core host: composition root, auth, middleware
-    Host.Worker/                  # Worker host: work-item pollers (leases), outbox dispatch, schedulers
+    Host.Worker/                  # Worker host: SQS consumers, outbox relay, reconciler, schedulers
     BuildingBlocks/
       MenuX.SharedKernel/    # TenantId, Money, Result, domain event base — tiny, stable
-      MenuX.Infrastructure/  # Outbox, work items, DynamoItemWriter, EF base, tenant context
+      MenuX.Infrastructure/  # Outbox + relay, SQS messaging, DynamoItemWriter, EF base, tenant context
     Modules/
       Tenancy/
         Tenancy.Contracts/        # Public API of the module: commands, queries, integration events, DTOs
@@ -101,7 +101,7 @@ For a small team, collapsing each module's `Application/Domain/Infrastructure` i
 2. **Each module owns its data.** No module reads or writes another module's tables or DynamoDB items. Each PostgreSQL module has its own **schema** (`tenancy`, `identity`, `billing`, `ordering`, `payments`, `audit`) and its own `DbContext`. Each DynamoDB module has its **own table**.
 3. Communication between modules:
    - **Synchronous query** through the Contracts interface (in-process call), e.g., `IMenuReadApi.GetPublishedVersion(...)`.
-   - **Asynchronous integration events** through a transactional **outbox** (a PostgreSQL outbox table or DynamoDB `OUTBOX` items written in the same transaction), dispatched by worker pollers to in-process handlers (ADR-18; no SQS or Streams in MVP-1), e.g., `MenuPublicationCommitted`, `TenantSuspended`, `ItemArchived`.
+   - **Asynchronous integration events** through a transactional **outbox** (a PostgreSQL outbox table or DynamoDB `OUTBOX` items written in the same transaction), sent by the outbox relay to the SQS `events` queue and delivered to in-process handlers (ADR-18; SNS later for fan-out; no Streams in MVP-1), e.g., `MenuPublicationCommitted`, `TenantSuspended`, `ItemArchived`.
 4. No distributed transactions across modules. Consistency across modules is **eventual**, using idempotent handlers.
 5. `SharedKernel` contains only value types used everywhere (`TenantId`, `Money`, `LanguageCode`). No business logic.
 6. Tenant context (`ITenantContext`) comes from the request and is never taken from the payload.

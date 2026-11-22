@@ -1,6 +1,6 @@
 # Versions record (week 1)
 
-Checked **2026-11-21** for doc 10 §3 and doc 14 §6. This file records facts and the versions pinned in the repository. It approves nothing: C1, C4 and C5 remain open, and ADR-17 remains **Proposed** (region decision due before week 9).
+Checked **2026-11-21** for doc 10 §3 and doc 14 §6. This file records facts and the versions pinned in the repository. It approves nothing: C1 (other P-items) and C4 remain open, and ADR-17 remains **Proposed** (region decision due before week 9). C5 was approved on 2026-11-21 separately (doc 13 §1d).
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation.
 
@@ -42,7 +42,7 @@ Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation.
 
 **Reassess before depending on unsupported or newer AWS API behaviour [R]:**
 1. Before any test relies on an S3 or AWS feature beyond the verified list above. If it isn't emulated correctly, the test could pass locally and fail on AWS.
-2. When adding any further AWS service to the local stack. Today it runs S3 only.
+2. When adding any further AWS service to the local stack. Today it runs S3 only. **Triggered by ADR-18 (accepted 2026-11-21):** SQS will be added to this same image in **week 2** (product owner's choice: no image switch, no token). At that point verify DLQ redrive, visibility timeout, `ChangeMessageVisibility` and long polling before relying on them.
 3. At the latest before the first AWS environment (week 9), when integration tests can also run against real AWS.
 
 **Options at reassessment:**

@@ -1,6 +1,6 @@
 # Library choices and licences: image processing and QR codes (L6)
 
-Research only, 2026-11-21 (doc 14 §6, week 1). **Nothing is installed or decided.** The image library is needed in week 3 (uploads + WebP renditions, doc 10 §12) and the QR library in the publishing/QR work. Doc 12 R-7 already flagged ImageSharp's split licence and suggested an MIT alternative such as SkiaSharp. Versions and licences come from NuGet package metadata on this date.
+**Decided 2026-11-21 (product owner): SkiaSharp for image processing and QRCoder for QR codes.** Research 2026-11-21 (doc 14 §6, week 1). Nothing is installed yet; each package is added when first used. The image library is needed in week 3 (uploads + WebP renditions, doc 10 §12) and the QR library in the publishing/QR work. Doc 12 R-7 already flagged ImageSharp's split licence and suggested an MIT alternative such as SkiaSharp. Versions and licences come from NuGet package metadata on this date.
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation.
 

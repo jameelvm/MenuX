@@ -1,7 +1,7 @@
 # 09 — Security and Multi-Tenancy Strategy
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
-**Revision 0.3 (DRAFT, pending approval — doc 13):** US pilot / UAE launch privacy tracks and `me-central-1` (draft 2026-11-21); work items instead of SQS (§2); BFF decided (§3); S3 tenant-prefixed layout and version purge (§4.4); QR edge check, WAF in `us-east-1`, alarm-only miss detection (§4.6); AI constraints in phase 2 (§6); US privacy (§8).
+**Revision 0.3 (DRAFT, pending approval — doc 13):** US pilot / UAE launch privacy tracks and `me-central-1` (draft 2026-11-21); background jobs on SQS via outbox relay (§2, ADR-18 accepted 2026-11-21); BFF decided (§3); S3 tenant-prefixed layout and version purge (§4.4); QR edge check, WAF in `us-east-1`, alarm-only miss detection (§4.6); AI constraints in phase 2 (§6); US privacy (§8).
 Revision 0.2: no public API in MVP-1 (§2); local OIDC (§3); purge role and TenantIndex access (§4.3); QR identifiers (§4.5) and rate limiting (§4.6) added; enumeration threat (§9).
 
 ---
@@ -32,7 +32,7 @@ flowchart LR
 Rules:
 1. Tenant ID comes from **the authenticated user's verified membership**. Because one user can belong to several tenants, the client sends the *selected* tenant (header). The server **verifies membership** on every request. It never trusts a `tenantId` in a body or route without that check.
 2. Resolved once per request into a scoped `ITenantContext`. Handlers can't set it.
-3. Background work items and outbox events carry `tenantId`. The worker re-establishes `ITenantContext` and **checks tenant status before every write**; work for non-active tenants is skipped. Only the application's IAM roles can write work items (no SQS in MVP-1, ADR-18).
+3. SQS job messages and outbox events carry `tenantId`. The worker re-establishes `ITenantContext` and **checks tenant status before every write**; messages for non-active tenants are acknowledged and dropped. Queues are encrypted (SSE), private to the account, and only the application's IAM roles can send or receive (ADR-18).
 4. **Public access has no tenant context.** In MVP-1 the public path is fully static (CloudFront + S3 projections, ADR-04/05), so **there are no public API endpoints**. Any public endpoint added later (e.g., ordering) must be a separate endpoint group with its own authorization and rate-limit policies.
 
 Alternative considered: putting `tenant_id` as a custom claim in the token (Cognito pre-token-generation Lambda). It's faster, but switching tenant requires a token refresh and membership revocation lags until token expiry. **Recommend the header + server-side membership check**, with a short cache.
@@ -121,7 +121,7 @@ CREATE POLICY tenant_isolation ON ordering.orders
 | Origin load from misses | CloudFront caches 403/404 for `/data/qr/*` (S3 without list permission returns 403 for missing objects) | 60 s |
 | Admin API | ASP.NET Core rate limiter per user and per tenant (token bucket); `429` + `Retry-After` | Stricter for QR creation (e.g., 100/hour/tenant) and publish (one active job per menu by design) |
 | Sign-up and login | WAF rate rule + AWS WAF CAPTCHA/challenge on sign-up; identity provider limits | — |
-| Background work | Poller concurrency limits per work type; per-tenant fairness | — |
+| Background work | Consumer concurrency limits per queue; per-tenant fairness; DLQ after 5 failed receives, 14-day retention | — |
 
 - **WAF for CloudFront is a global-scope web ACL that must be created in `us-east-1`**, whatever the application region (Terraform note).
 - The ASP.NET Core rate limiter is **in-memory per instance**. With several API tasks the effective limit is per task × task count. That's acceptable for MVP-1; exact global limits would need a shared store.
@@ -174,6 +174,6 @@ Rev 0.3 constraints: uploaded sources at `t/{tenantId}/ai-inputs/…` with a 30-
 | Information disclosure | Tenant A reads Tenant B's menu drafts | Layered isolation (§4), cross-tenant CI tests |
 | Information disclosure | Guessing QR codes to discover venues or table codes | 128-bit random codes; WAF rate rules; miss-rate detection and blocking (§4.5–4.6) |
 | Information disclosure | Deleted tenant's data left behind in child partitions or S3 versions | TenantIndex enumeration, verification pass, S3 version purge, monthly orphan audit (doc 07 §7) |
-| Denial of service | Scan floods, AI job floods | CDN caching, WAF rate rules, AI quotas (phase 2), work items processed at a controlled rate |
+| Denial of service | Scan floods, AI job floods | CDN caching, WAF rate rules, AI quotas (phase 2), SQS jobs processed at a controlled rate |
 | Elevation of privilege | Editor grants self Owner | Permission checks on role changes; owner-only role management; audit |
 | QR hijack | Attacker sticks a fake QR on tables | Out of our technical control. Mitigate with branded short domain, tenant-visible QR list, guidance for venues |

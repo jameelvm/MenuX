@@ -14,9 +14,9 @@ MenuX is a multi-tenant SaaS platform where US food businesses (restaurants, caf
 
 | Item | State |
 |------|-------|
-| Phase | **Week 1 approved (W1–W3, 2026-11-21)**; Rev 0.3 architecture (C1) and roadmap beyond week 1 (C5) still open. Later weeks gated by doc 13 §1c. |
+| Phase | Week 1 approved (W1–W3); **week-2 gate decided 2026-11-21** (C5 weeks 2–12, ADR-06, ADR-18 → SQS, U4, U7; doc 13 §1d). C1 open for the other P-items; C4/ADR-17 open. Later weeks gated by doc 13 §1c. |
 | Application code | Week-1 foundation pushed on `week1/foundation` (`0d16361`, PR #1 open), CI green on GitHub. Remaining week 1: budget alert, Terraform state bucket, version-record gaps, required checks (product owner). |
-| Plan | Proposed: `docs/10-implementation-roadmap.md` §12 (not yet approved) |
+| Plan | `docs/10-implementation-roadmap.md` §12 — weeks 2–12 **approved as written** (2026-11-21); if behind, the end date slips, nothing is cut or deferred |
 | Kickoff checklist | Draft: `docs/14-rev-0.3-baseline-and-kickoff.md` §6 |
 | Repo folders | `docs/` (complete), `src/backend`, `src/frontend`, `infrastructure/terraform`, `tests/` (empty) |
 | Git | Repository `https://github.com/jameelvm/MenuX.git`, branch `main`; first commit `c57b5ab` (Rev 0.3 baseline) |
@@ -43,13 +43,15 @@ MenuX is a multi-tenant SaaS platform where US food businesses (restaurants, caf
 | 16 | 2026-11-21 | Committed and pushed `9a74e0e`. **Week-1 work started** on branch `week1/foundation` (local, **not committed**). Done and verified locally: .NET 10 solution skeleton (8 modules × `X.Contracts` + `X`, hosts, building blocks); architecture tests (36 pass; an injected violation is caught); `compose.yaml` (PostgreSQL 18.6, DynamoDB Local 3.3.2, LocalStack 4.14.0, Mailpit 1.34.0) with smoke checks; `docs/architecture/versions.md`; `docs/architecture/library-licences.md` (research only); `.github/workflows/ci.yml` (not pushed, not run). **Findings:** AWS Health Dashboard says `me-central-1` is unable to reliably support customer applications (since 2026-03; latest update 2026-09-15) → ADR-17 blocker reported, ADR-17 unchanged (Proposed); LocalStack images after 2026-03-23 need an auth token. **Blocked:** Angular workspace waits for Node ≥ 24.15 (product owner updating). No AWS account changes. |
 | 17 | 2026-11-21 | Node 24.22.3 installed (winget, UAC by product owner). **Angular 22.3 workspace** (`admin`/`public`, prefixes `adm`/`pub`, strict) verified. ADR-17 evidence re-checked and recorded (versions.md §3.2: AWS 2026-04-30 and 2026-09-15 statements; documented fallback Option A); ADR-17 unchanged. LocalStack kept at 4.14.0 as a **temporary** local/CI test dependency, no token (product owner); limitations and reassessment triggers documented in versions.md §1.1 and the compose comment. Review of src structure; product owner approved: **rename to MenuX (code + docs)**, per-kind project-reference allowlist tests (78 tests pass, negative checks fail as expected), removal of empty layer folders/.gitkeep, `*.zip` ignored, Angular prefixes + explicit strict. `docs.zip` no longer on disk (not removed by Claude). Not committed. |
 | 18 | 2026-11-21 | **Week 1:** commit `0d16361` pushed to `origin/week1/foundation`; PR #1 (`week1/foundation` → `main`) open, not merged. **GitHub CI green** for `0d16361`: `Backend build and tests` and `Frontend build and tests` passed in the push and pull-request runs. Required checks recommended for `main` (product owner configures them in GitHub). Terraform 1.17.2 (HashiCorp binary, GPG + SHA-256 verified, user PATH) and AWS CLI 2.42.1 (signed AWS MSI) installed; **no credentials configured, no AWS calls made**. An existing `~/.aws` config/credentials (created 2026-10-22) was found and not opened. Product owner confirmed root MFA and an IAM Identity Center user exist on the existing AWS account (not verified by Claude). |
+| 19 | 2026-11-21 | **Week-2 gate decisions confirmed by the product owner** (restated and confirmed via question prompt): C5 approved as written (end date slips if behind; §12.3 = priority order); ADR-06 Accepted; ADR-18 rewritten → Amazon SQS via transactional outbox relay (DLQs, idempotent handlers, SNS later; local SQS on the same LocalStack image), supersedes P8/F1; U4 and U7 approved. Further confirmed: DLQ 5 failed receives / 14-day retention + DLQ procedure (doc 06 §5.1); SQS minimal setup in week 2, media week 3, publishing week 5; temporary AWS test deployments in `us-east-1` with teardown of MenuX test resources only (doc 10 §12.6; ADR-17 unchanged); USD 25/month budget alert (email kept out of the repo); state bucket `us-east-1` encrypted/versioned/no public access; SkiaSharp + QRCoder. Docs 04–11, 13, 14, README, versions.md, library-licences.md, CLAUDE.md updated, on branch `docs/week2-gate-decisions`. |
 
 ## 4. Decisions
 
 - **Accepted (Rev 0.2):** ADR-01, 02, 03, 07, 12, 13, 14, 16.
 - **Proposed, pending confirmation:** ADR-04, 05, 06, 08, 09, 10, 11, 15, 17 (US pilot → UAE launch; `me-central-1` proposed, region decision before week 9), 18, 19 (market packs); P1–P21; roadmap doc 10 §12.
 - **Market strategy (draft, user input 2026-11-21):** US = pilot/validation market; UAE = target commercial launch market.
-- **Draft refinements awaiting approval (doc 14 §3, F1–F7):** no SQS (work items + leases); manifest builds serialized by a MANIFEST lease (FIFO removed, PUB-2 resolved); no DynamoDB Streams (transactional outbox items); 90 locations per menu; explicit intentional upserts; GSI1 name truncation; US defaults (USD, en-US, FDA nine allergens, optional calories field).
+- **Accepted 2026-11-21:** ADR-06 (Fargate, Cognito/Keycloak, BFF, provider-neutral identity), ADR-18 (Amazon SQS via outbox relay, DLQs, idempotent handlers, SNS later). **Approved:** C5, U4/P13, U7/P16. **Superseded:** P8, F1.
+- **Draft refinements awaiting approval (doc 14 §3, F1–F7):** ~~no SQS~~ (F1 superseded by ADR-18); manifest builds serialized by a MANIFEST lease (FIFO removed, PUB-2 resolved); no DynamoDB Streams (transactional outbox items); 90 locations per menu; explicit intentional upserts; GSI1 name truncation; US defaults (USD, en-US, FDA nine allergens, optional calories field).
 
 ## 5. Open items (none blocks week 1)
 
@@ -70,10 +72,10 @@ MenuX is a multi-tenant SaaS platform where US food businesses (restaurants, caf
 |------|---------------|
 | `docs/14-rev-0.3-baseline-and-kickoff.md` | Baseline summary, refinements F1–F7, final MVP-1 scope, open items, kickoff checklist |
 | `docs/11-architecture-review-and-open-questions.md` | ADR register (01–18), missing requirements, decision status |
-| `docs/10-implementation-roadmap.md` | §12 proposed plan (pending C5; only week 1 approved under W2), protected tests (§12.2), flex scope (§12.3) |
+| `docs/10-implementation-roadmap.md` | §12 plan (weeks 2–12 approved), protected tests (§12.2), priority order if behind (§12.3) |
 | `docs/architecture/04` | HLD; publish flow §4.1; QR resolution §4.2; hosting §6.2 |
 | `docs/database/07` | DynamoDB principles, tables (catalog, menus, publishing, media), TenantIndex and deletion §7 |
-| `docs/database/06`, `08` | Hybrid DB, outbox/work items; PostgreSQL ERD and retention |
+| `docs/database/06`, `08` | Hybrid DB, outbox relay → SQS; PostgreSQL ERD and retention |
 | `docs/architecture/09` | Security, S3 layout, QR and rate limiting |
 | `docs/12`, `docs/13` | Review and confirmation records |
 

@@ -1,7 +1,7 @@
 # 04 — High-Level Architecture
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
-**Revision 0.3 (DRAFT, pending approval — doc 13):** market packs and `me-central-1` (draft 2026-11-21); two hostnames (§3); work items and outbox instead of SQS/Streams (ADR-18); publish flow rewritten with the per-menu lock, tenant guard, MANIFEST lease, UNPUBLISH, full-state rollback and cache table (§4.1); QR edge check (§4.2); sold-out overlay and AI in phase 2 (§4.3–4.4); region `me-central-1` proposed (week-1 feasibility/service verification only; region decision before week 9) (§5.1); public-app amendments (§6.2); BFF (§6.5).
+**Revision 0.3 (DRAFT, pending approval — doc 13):** market packs and `me-central-1` (draft 2026-11-21); two hostnames (§3); background jobs on Amazon SQS via a transactional outbox relay, no Streams (ADR-18, accepted 2026-11-21); publish flow rewritten with the per-menu lock, tenant guard, MANIFEST lease, UNPUBLISH, full-state rollback and cache table (§4.1); QR edge check (§4.2); sold-out overlay and AI in phase 2 (§4.3–4.4); region `me-central-1` proposed (week-1 feasibility/service verification only; region decision before week 9) (§5.1); public-app amendments (§6.2); BFF (§6.5).
 Revision 0.2: fully static public path (§3, §4.2); authoritative publication pointer, publish state machine and failure handling (§4.1); public app hosting resolved, static prerendering vs. dynamic SSR (§6.2); .NET 10; production topology vs. learning environment (§5).
 
 ---
@@ -84,7 +84,8 @@ flowchart TB
   API --> DDB
   API --> PG
   API --> S3M
-  WRK -.->|polls work items + outbox| DDB
+  WRK -.->|state + outbox relay| DDB
+  WRK <-.->|send / receive jobs| SQ[(Amazon SQS queues + DLQs)]
   WRK -.->|polls job and outbox rows| PG
   WRK --> DDB
   WRK --> PG
@@ -103,8 +104,8 @@ flowchart TB
 | **Admin Portal** | Tenant back-office: catalogue, menus, locations, publish, QR, users (AI review in phase 2). | Angular (active/LTS major, verified at environment preparation, doc 10 §3), standalone components, signals; static CSR SPA on the **admin app hostname**, signed in through the BFF session. |
 | **Public Menu App** | Customer-facing menu (cart/order* later). | Angular **static build**: prerendered app shell + client-side rendering of CDN JSON; runtime UI dictionaries; strict bundle budget; on the **public menu hostname** (no cookies). No SSR server. See §6.2. |
 | **API service** | Admin commands/queries and **BFF endpoints** (OIDC login/logout, session). **No public endpoints in MVP-1.** | ASP.NET Core on **.NET 10 LTS** (ADR-01), on ECS Fargate behind ALB, reached via the admin app hostname. |
-| **Worker service** | Publish jobs, manifest builds, QR/route projections, reconciler, media processing, outbox dispatch, tenant purge and supervisor (AI jobs in phase 2). | Same solution, separate host (`Worker` entry point) running **pollers over work items** (DynamoDB `WorkIndex`, PostgreSQL `SKIP LOCKED`) with leases. No SQS (ADR-18). |
-| **DynamoDB** | Tables `catalog`, `media`, `menus`, `publishing` (`ai` in phase 2). | On-demand, PITR, KMS; `TenantIndex` + sparse `WorkIndex` on every table; **no Streams** in MVP-1. |
+| **Worker service** | Publish jobs, manifest builds, QR/route projections, reconciler, media processing, outbox dispatch, tenant purge and supervisor (AI jobs in phase 2). | Same solution, separate host (`Worker` entry point) running **SQS consumers** (long polling), the **outbox relay** and the reconciler; leases guard against duplicate deliveries (ADR-18). |
+| **DynamoDB** | Tables `catalog`, `media`, `menus`, `publishing` (`ai` in phase 2). | On-demand, PITR, KMS; `TenantIndex` + sparse `WorkIndex` (outbox relay and reconciler lookups only) on every table; **no Streams** in MVP-1. |
 | **PostgreSQL** | Tenants, memberships, locations, audit, deletion tracking, outbox (billing, orders*, payments* later). | RDS PostgreSQL (or Aurora PostgreSQL Serverless v2, see §6.4). |
 | **S3** | Media (raw + processed); public data projections (snapshots, manifests, QR/route files); app bundles; QR print assets; exports. | Separate buckets; block public access; CloudFront Origin Access Control only; tenant-prefixed keys and versioning (doc 09 §4.4). |
 | **Cognito** | Authentication for tenant users and platform staff (separate user pools); Keycloak realms locally. | Used only through the BFF (server-side OIDC code flow + PKCE); MFA for Owner/Admin. |
@@ -145,7 +146,7 @@ Types: **PUBLISH** (build from the draft), **ROLLBACK** (restore `VER#k`), **UNP
 ```mermaid
 stateDiagram-v2
   [*] --> REQUESTED: tx Put ACTIVEJOB + Put JOB (409 if another job is active)
-  REQUESTED --> BUILDING: poller claims with lease
+  REQUESTED --> BUILDING: worker receives SQS message, claims with lease
   BUILDING --> BUILDING: lease expired, reclaimed (attempt + 1)
   BUILDING --> SUPERSEDED: draft changed after request (lock released)
   BUILDING --> FAILED: validation, tenant blocked, or attempts exhausted (lock released)
@@ -158,8 +159,8 @@ stateDiagram-v2
 ```
 
 #### Steps
-1. **Request (API).** Checks: tenant active, `menu.publish` permission. For PUBLISH, read `META.draftVersion` through the Menus contract; `409` if it differs from `expectedDraftVersion`. Then `TransactWriteItems`: Put `ACTIVEJOB` (`attribute_not_exists`) + Put `JOB#{ulid}` (REQUESTED, WorkIndex attributes). If `ACTIVEJOB` exists: same type and draftVersion → return its job (idempotent double click); otherwise `409 Publishing in progress`.
-2. **Dispatch (poller-only, ADR-18).** Worker pollers query the WorkIndex every 2–5 s for REQUESTED jobs and BUILDING jobs with expired leases. Identical locally and in AWS; no Streams, Pipes or SQS.
+1. **Request (API).** Checks: tenant active, `menu.publish` permission. For PUBLISH, read `META.draftVersion` through the Menus contract; `409` if it differs from `expectedDraftVersion`. Then `TransactWriteItems`: Put `ACTIVEJOB` (`attribute_not_exists`) + Put `JOB#{ulid}` (REQUESTED) + Put `OUTBOX` item (`PublishJobRequested`). If `ACTIVEJOB` exists: same type and draftVersion → return its job (idempotent double click); otherwise `409 Publishing in progress`.
+2. **Dispatch (SQS, ADR-18).** The outbox relay sends the job message to the `publishing` queue. A worker receives it, loads the job and claims it (`REQUESTED`, or `BUILDING` with an expired lease). Duplicates are harmless: the claim is conditional. A crash before the claim means the message reappears after the visibility timeout; the reconciler re-enqueues jobs that stop progressing. No Streams or Pipes.
 3. **Claim.** Conditional update (`status = REQUESTED`, or `BUILDING AND leaseUntil < :now`) → BUILDING, `leaseOwner`, `leaseUntil = now + 5 min`, `attempt + 1`, `expectedRevision` = current `CURRENT.pointerRevision`. Heartbeat extends the lease if work runs past half of it. After 5 attempts → FAILED + alarm.
 4. **Build (PUBLISH only).** Read `META.draftVersion` (v1, consistent) → read the menu header and query the whole menu partition (all pages, consistent) → read META again (v2). Every draft write, including header edits, increments META in the same transaction (PUB-4), so v1 = v2 proves a consistent snapshot. If v1 ≠ v2, retry the read (up to 3 times). If v1 ≠ the job's `draftVersion` → **SUPERSEDED**. `BatchGetItem` the referenced catalog items; a missing or archived item, a missing price, an unprocessed image or more than 90 locations → **FAILED** with a validation list. Serialize deterministically (sorted keys) → SHA-256.
 5. **Store snapshot.** `PUT data/t/{t}/snapshots/{sha256}.json` with `If-None-Match: *`; `412` = already exists = success. Where conditional writes aren't supported, HEAD + PUT is safe for content-addressed objects (PUB-13).
@@ -173,7 +174,7 @@ stateDiagram-v2
    7. Put outbox event `MenuPublicationCommitted`
 
    That's 7 fixed actions plus changed locations, within DynamoDB's 100-action limit, hence the **90-locations-per-menu** limit. A guard failure → FAILED ("account not active") and the lock is released. The revision condition can't fail under the lock except through a defect: retry once, then FAILED + alarm. SUPERSEDED and FAILED transitions also release the lock in the same write.
-7. **Project.** After commit, the worker marks each affected location's `MANIFEST` dirty (`ADD dirtyVersion 1`, `SET dirty = true`, WorkIndex attributes), records `awaitVersions` on the job, and leaves the job COMMITTED. Manifest pollers claim dirty `MANIFEST` items with a **build lease** (one builder per location), read the authoritative state (`Query PUB#` → consistent `BatchGetItem` of `CURRENT`; location and tenant status), write the manifest (`Cache-Control: max-age=30`), then clear: `SET builtVersion = :v, dirty = false REMOVE GSI2PK, GSI2SK` with condition `dirtyVersion = :v AND buildLeaseOwner = :me`. **If the clear fails, the builder re-marks the location dirty**, so a stale write always gets rebuilt (convergence). When every affected location's `builtVersion` ≥ its awaited version, the job becomes **LIVE** and `MenuLive` is emitted. Guests see the change within ~30 s (TTL).
+7. **Project.** After commit, the worker marks each affected location's `MANIFEST` dirty (`ADD dirtyVersion 1`, `SET dirty = true`) with a `ManifestDirty` outbox record, records `awaitVersions` on the job, and leaves the job COMMITTED. Manifest builders receive the message from the `publishing` queue and claim the dirty `MANIFEST` item with a **build lease** (one builder per location), read the authoritative state (`Query PUB#` → consistent `BatchGetItem` of `CURRENT`; location and tenant status), write the manifest (`Cache-Control: max-age=30`), then clear: `SET builtVersion = :v, dirty = false REMOVE GSI2PK, GSI2SK` with condition `dirtyVersion = :v AND buildLeaseOwner = :me`. **If the clear fails, the builder re-marks the location dirty**, so a stale write always gets rebuilt (convergence). When every affected location's `builtVersion` ≥ its awaited version, the job becomes **LIVE** and `MenuLive` is emitted. Guests see the change within ~30 s (TTL).
 
 #### Other triggers that mark manifests dirty
 - **Suspension, reactivation, deletion scheduling or cancellation:** Publishing sets `TENANTGUARD` (BLOCKED/ACTIVE) and marks all of the tenant's locations dirty. The builder outputs "unavailable" for blocked tenants, and those manifest paths are **invalidated** for fast takedown.
@@ -185,14 +186,14 @@ stateDiagram-v2
 | Failure | Job state | Recovery | Editor sees | Guests see |
 |---------|-----------|----------|-------------|------------|
 | Second request while a job is active | (rejected) | Same request → existing job; different → 409 | "Publishing in progress" | — |
-| Worker crash before claim | REQUESTED | Poller picks it up | "Publishing…" | Previous version |
+| Worker crash before claim | REQUESTED | SQS redelivers after the visibility timeout | "Publishing…" | Previous version |
 | Worker crash during build | BUILDING, lease expires | Reclaimed; same draft → same hash | Delay | Previous version |
 | Draft edited after the click | SUPERSEDED, lock released | Review and publish again | Message | Previous version |
 | Validation error | FAILED, lock released | Fix the draft, publish again (new job) | Error list | Previous version |
 | S3 PUT fails | BUILDING | Retry with backoff; 5 attempts → FAILED + alarm | Delay or error | Previous version |
 | Tenant blocked during publish | FAILED, lock released | — | "Account not active" | Unavailable or previous |
 | Commit transient error | BUILDING | Retry | Delay | Previous version |
-| Commit OK, manifest build fails | COMMITTED | `MANIFEST` stays dirty; pollers retry; reconciler alarms after 15 min | "Published, going live…" | **Previous manifest — consistent, never mixed** |
+| Commit OK, manifest build fails | COMMITTED | `MANIFEST` stays dirty; SQS redelivers (DLQ after 5 failed receives; doc 06 §5.1); reconciler re-enqueues and alarms after 15 min | "Published, going live…" | **Previous manifest — consistent, never mixed** |
 | Builder lease expired mid-write (stale write) | COMMITTED/LIVE | Failed clear re-marks dirty → rebuild | — | ≤ ~30 s stale |
 | Retry after FAILED | New job | Lock was released, so publishing again simply works | — | — |
 
@@ -224,7 +225,7 @@ stateDiagram-v2
 MVP-1 uses the `soldOut` flag on placements, applied on publish. In phase 2: a small `availability.json` per location (sold-out item IDs) with a ~10–15 s TTL, merged by the public app, giving near-real-time "86'd" updates without republishing.
 
 ### 4.4 AI job flow — phase 2 (ADR-08, ADR-15)
-Design kept for phase 2. Admin uploads a photo/PDF (stored at `t/{tenantId}/ai-inputs/…`, 30-day lifecycle) → API checks the plan limit and quota → AI job item (WorkIndex) → worker calls Claude with **structured outputs** against a strict JSON schema (forced `tool_choice` isn't supported on the default model), effort set explicitly, `refusal` stop reasons handled → results stored as **suggestions** (`SUG#` items, doc 07 §3.4) → the editor accepts, edits or rejects → accepted content becomes a normal draft change. Allergens are extracted only when printed on the source and flagged "unverified". One concurrent AI job per tenant; size and page limits per job. Every call is metered per tenant (`ai_usage`). Model: `claude-opus-5-5` by default; a cheaper model only after measured evaluation.
+Design kept for phase 2. Admin uploads a photo/PDF (stored at `t/{tenantId}/ai-inputs/…`, 30-day lifecycle) → API checks the plan limit and quota → AI job item + outbox → `ai` SQS queue → worker calls Claude with **structured outputs** against a strict JSON schema (forced `tool_choice` isn't supported on the default model), effort set explicitly, `refusal` stop reasons handled → results stored as **suggestions** (`SUG#` items, doc 07 §3.4) → the editor accepts, edits or rejects → accepted content becomes a normal draft change. Allergens are extracted only when printed on the source and flagged "unverified". One concurrent AI job per tenant; size and page limits per job. Every call is metered per tenant (`ai_usage`). Model: `claude-opus-5-5` by default; a cheaper model only after measured evaluation.
 
 ## 5. Deployment and environments
 
@@ -245,8 +246,8 @@ Design kept for phase 2. Admin uploads a photo/PDF (stored at `t/{tenantId}/ai-i
 
 | Stage | Weeks | Environment |
 |-------|-------|-------------|
-| Local | 1–8 | Docker: PostgreSQL, DynamoDB Local, LocalStack (S3), Keycloak (OIDC), Mailpit. Same work-item pollers as in AWS (ADR-18). Details: doc 10 §4, §12. |
-| One AWS account | 9–12 | Region per ADR-17 (draft: `me-central-1`). Same architecture as §3 with cost reductions: one environment, single-AZ RDS, Fargate in public subnets with tight security groups and no NAT Gateway, free gateway endpoints for S3/DynamoDB, budget alarms. **These are deliberate deviations from §5.1.** Not accepted for real pilot data until the §5.3 assessment is reviewed. |
+| Local | 1–8 | Docker: PostgreSQL, DynamoDB Local, LocalStack (S3, plus SQS from week 2), Keycloak (OIDC), Mailpit. Same SQS API and outbox relay as in AWS (ADR-18). Details: doc 10 §4, §12. |
+| One AWS account | 9–12 | **Temporary test deployments in `us-east-1`** (2026-11-21; deploy, test, tear down; data discardable; not production-ready; doc 10 §12.6). The pilot/launch region stays per ADR-17 (Proposed). Same architecture as §3 with cost reductions: one environment, single-AZ RDS, Fargate in public subnets with tight security groups and no NAT Gateway, free gateway endpoints for S3/DynamoDB, budget alarms. **These are deliberate deviations from §5.1.** Not accepted for real pilot data until the §5.3 assessment is reviewed. |
 | Production | Phase 2 | §5.1 topology. |
 
 ### 5.3 Learning environment with real pilot data — risk assessment (**DRAFT, NOT ACCEPTED**; draft 2026-11-21)
@@ -277,7 +278,7 @@ The single-account learning environment (§5.2) was designed for learning, not f
 | G4 | **Network hardening:** task security groups accept traffic only from the ALB; RDS in private subnets with no public access; ECS Exec disabled (or audited); no SSH | E2 | ½ day |
 | G5 | **Availability:** scale-to-zero disabled during the pilot; at least 1 API task (2 recommended); single-AZ RDS **accepted only with disclosure** in the pilot terms | E3, E4 | Config |
 | G6 | **Access:** root MFA, IAM Identity Center, no long-lived keys, least-privilege task roles, CI deploys through OIDC | E1, E8 | Already planned |
-| G7 | **Detection:** CloudTrail, GuardDuty, budget alarms, alarms for 5xx, stuck work items and purge failures; 30-day log retention | E8 | ½ day |
+| G7 | **Detection:** CloudTrail, GuardDuty, budget alarms, alarms for 5xx, SQS DLQ depth and stuck jobs, and purge failures; 30-day log retention | E8 | ½ day |
 | G8 | **Deploy safety:** protected tests required in CI; rollback to the previous task definition documented and tried once; expand/contract migrations only | E6 | ½ day |
 | G9 | **Encryption and secrets:** KMS at rest everywhere, TLS everywhere, secrets only in Secrets Manager | — | Already planned |
 | G10 | **Focused security review** completed, with no open critical or high findings | E9 | 1 day |
