@@ -7,7 +7,7 @@ Tags: [S] stated · [D] derived · [A] assumption, needs confirmation · [R] rec
 
 ## 1. Summary
 
-Menu Studio is a multi-tenant SaaS platform. Hospitality and retail businesses use it to create, manage and publish digital menus. Their customers open those menus by scanning a QR code. [S]
+MenuX is a multi-tenant SaaS platform. Hospitality and retail businesses use it to create, manage and publish digital menus. Their customers open those menus by scanning a QR code. [S]
 
 ## 2. Problem statement
 

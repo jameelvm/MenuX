@@ -1,0 +1,55 @@
+# MenuX — local development stack (week 1, plain Docker Compose per W3).
+# Local only: ports bind to 127.0.0.1; no real tenant data; placeholder credentials from .env.
+# Image versions are pinned; see docs/architecture/versions.md for how they were chosen.
+# Keycloak is added in week 2, once ADR-06 is decided.
+name: menux
+
+services:
+  postgres:
+    # Same major as the latest RDS for PostgreSQL major (18); minor matches the latest RDS minor seen (18.6).
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?copy .env.example to .env}
+      POSTGRES_USER: ${POSTGRES_USER:?copy .env.example to .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  dynamodb:
+    # In-memory: local data is recreated from table definitions and seed scripts (added in later weeks).
+    image: amazon/dynamodb-local:3.3.2
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    ports:
+      - "127.0.0.1:${DYNAMODB_PORT:-8000}:8000"
+
+  localstack:
+    # Pinned to the last 4.x Community image that starts without an auth token (verified 2026-11-21).
+    # TEMPORARY: frozen image, no further fixes or security patches. Local/CI test use only; keep the port on 127.0.0.1.
+    # Newer images require an account token. Reassess before relying on newer AWS API behaviour (versions.md §1.1).
+    image: localstack/localstack:4.14.0
+    environment:
+      SERVICES: s3
+      AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+    ports:
+      - "127.0.0.1:${LOCALSTACK_PORT:-4566}:4566"
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fs http://localhost:4566/_localstack/health | grep -Eq "\"s3\": \"(running|available)\""']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  mailpit:
+    image: axllent/mailpit:v1.34.0
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+
+volumes:
+  postgres-data:

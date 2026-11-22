@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tiny, stable value types used everywhere (TenantId, Money, LanguageCode). No business logic, no module references (doc 05 §3 rule 5). -->
+</Project>

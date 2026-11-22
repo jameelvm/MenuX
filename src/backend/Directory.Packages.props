@@ -1,0 +1,11 @@
+<Project>
+  <!-- Central package management. Versions checked 2026-11-21; see docs/architecture/versions.md. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Test-only packages (week 1). Runtime packages (EF Core, Npgsql, AWS SDK) are added when first used. -->
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
+    <PackageVersion Include="TngTech.ArchUnitNET.xUnitV3" Version="0.13.5" />
+  </ItemGroup>
+</Project>

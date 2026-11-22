@@ -1,0 +1,49 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/MenuX.Infrastructure/MenuX.Infrastructure.csproj" />
+    <Project Path="src/BuildingBlocks/MenuX.SharedKernel/MenuX.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Host.Api/">
+    <Project Path="src/Host.Api/MenuX.Host.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/Host.Worker/">
+    <Project Path="src/Host.Worker/MenuX.Host.Worker.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Audit/">
+    <Project Path="src/Modules/Audit/MenuX.Audit.Contracts/MenuX.Audit.Contracts.csproj" />
+    <Project Path="src/Modules/Audit/MenuX.Audit/MenuX.Audit.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Catalog/">
+    <Project Path="src/Modules/Catalog/MenuX.Catalog.Contracts/MenuX.Catalog.Contracts.csproj" />
+    <Project Path="src/Modules/Catalog/MenuX.Catalog/MenuX.Catalog.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Identity/">
+    <Project Path="src/Modules/Identity/MenuX.Identity.Contracts/MenuX.Identity.Contracts.csproj" />
+    <Project Path="src/Modules/Identity/MenuX.Identity/MenuX.Identity.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Media/">
+    <Project Path="src/Modules/Media/MenuX.Media.Contracts/MenuX.Media.Contracts.csproj" />
+    <Project Path="src/Modules/Media/MenuX.Media/MenuX.Media.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Menus/">
+    <Project Path="src/Modules/Menus/MenuX.Menus.Contracts/MenuX.Menus.Contracts.csproj" />
+    <Project Path="src/Modules/Menus/MenuX.Menus/MenuX.Menus.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Notifications/">
+    <Project Path="src/Modules/Notifications/MenuX.Notifications.Contracts/MenuX.Notifications.Contracts.csproj" />
+    <Project Path="src/Modules/Notifications/MenuX.Notifications/MenuX.Notifications.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Publishing/">
+    <Project Path="src/Modules/Publishing/MenuX.Publishing.Contracts/MenuX.Publishing.Contracts.csproj" />
+    <Project Path="src/Modules/Publishing/MenuX.Publishing/MenuX.Publishing.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Tenancy/">
+    <Project Path="src/Modules/Tenancy/MenuX.Tenancy.Contracts/MenuX.Tenancy.Contracts.csproj" />
+    <Project Path="src/Modules/Tenancy/MenuX.Tenancy/MenuX.Tenancy.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MenuX.ArchitectureTests/MenuX.ArchitectureTests.csproj" />
+  </Folder>
+</Solution>

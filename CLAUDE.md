@@ -1,4 +1,4 @@
-# CLAUDE.md — Menu Studio
+# CLAUDE.md — MenuX
 
 ## Start of every session
 1. Read `progress.md` (current phase, open items, next steps).

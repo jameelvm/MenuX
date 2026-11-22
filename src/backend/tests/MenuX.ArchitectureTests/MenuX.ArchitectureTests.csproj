@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="TngTech.ArchUnitNET.xUnitV3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Host.Api\MenuX.Host.Api.csproj" />
+    <ProjectReference Include="..\..\src\Host.Worker\MenuX.Host.Worker.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Tenancy\MenuX.Tenancy\MenuX.Tenancy.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Identity\MenuX.Identity\MenuX.Identity.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Catalog\MenuX.Catalog\MenuX.Catalog.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Menus\MenuX.Menus\MenuX.Menus.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Publishing\MenuX.Publishing\MenuX.Publishing.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Media\MenuX.Media\MenuX.Media.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Notifications\MenuX.Notifications\MenuX.Notifications.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Audit\MenuX.Audit\MenuX.Audit.csproj" />
+  </ItemGroup>
+</Project>

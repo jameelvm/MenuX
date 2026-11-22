@@ -1,0 +1,77 @@
+# Build and test (week 1). No deployment, no cloud credentials, no secrets.
+name: CI
+
+on:
+  push:
+    branches: [main, week1/foundation]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  backend:
+    name: Backend build and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src/backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: src/backend/global.json
+
+      - name: Restore
+        run: dotnet restore MenuX.slnx
+
+      - name: Build (warnings are errors)
+        run: dotnet build MenuX.slnx --no-restore --configuration Release
+
+      # Protected test group "boundaries" (doc 10 §12.2). Register this job as a required
+      # status check in branch protection once the workflow has run on GitHub.
+      - name: Architecture tests
+        run: dotnet test --solution MenuX.slnx --no-build --configuration Release
+
+  frontend:
+    name: Frontend build and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src/frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: src/frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build admin
+        run: npx ng build admin
+
+      - name: Build public
+        run: npx ng build public
+
+      - name: Unit tests
+        run: npx ng test admin --watch=false && npx ng test public --watch=false

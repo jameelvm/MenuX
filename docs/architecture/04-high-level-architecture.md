@@ -23,7 +23,7 @@ flowchart LR
   guest([Guest / Customer<br/>mobile browser])
   staff([Tenant users<br/>Owner/Admin/Editor/Staff])
   padmin([Platform admin / support])
-  ms[[Menu Studio]]
+  ms[[MenuX]]
   claude[(Anthropic Claude API)]
   psp[(Payment provider<br/>if in scope)]
   email[(Email: Amazon SES)]
@@ -295,7 +295,7 @@ The single-account learning environment (§5.2) was designed for learning, not f
 
 **Rendering modes compared:**
 
-| Mode | What happens | Fit for Menu Studio |
+| Mode | What happens | Fit for MenuX |
 |------|-------------|---------------------|
 | **Static prerendering (SSG)** | HTML generated **at build time** for routes known at build time | Only for the **app shell** and fixed pages (not found, unavailable, about). Tenant menus are runtime data that changes on every publish, so they can't be prerendered at build time without rebuilding and redeploying the app per publish. |
 | **Dynamic SSR** | A Node.js server renders HTML **for every request** (cacheable at the CDN) | Faster first paint and SEO, but it adds a Node runtime beside .NET, puts compute in the public path (contradicting ADR-04), and adds cost and operations work. |

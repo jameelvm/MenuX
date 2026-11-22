@@ -1,4 +1,4 @@
-# Menu Studio — Progress Log
+# MenuX — Progress Log
 
 Purpose: restore context quickly if a working session is lost. Read this first, then `docs/14-rev-0.3-baseline-and-kickoff.md` and `docs/README.md`.
 
@@ -8,14 +8,14 @@ Last updated: 2026-11-21
 
 ## 1. Project in one paragraph
 
-Menu Studio is a multi-tenant SaaS platform where US food businesses (restaurants, cafes, hotel outlets, food shops) create digital menus that guests open by scanning QR codes. Stack: Angular, ASP.NET Core (.NET 10 LTS), DynamoDB (catalog, media, menus, publishing), PostgreSQL (tenancy, identity, audit, deletion tracking), S3 + CloudFront, Terraform on AWS. The Claude API comes in phase 2 (AI menu import). Single-developer learning project, ~20 h/week, local-first.
+MenuX is a multi-tenant SaaS platform where US food businesses (restaurants, cafes, hotel outlets, food shops) create digital menus that guests open by scanning QR codes. Stack: Angular, ASP.NET Core (.NET 10 LTS), DynamoDB (catalog, media, menus, publishing), PostgreSQL (tenancy, identity, audit, deletion tracking), S3 + CloudFront, Terraform on AWS. The Claude API comes in phase 2 (AI menu import). Single-developer learning project, ~20 h/week, local-first.
 
 ## 2. Current phase
 
 | Item | State |
 |------|-------|
 | Phase | **Week 1 approved (W1–W3, 2026-11-21)**; Rev 0.3 architecture (C1) and roadmap beyond week 1 (C5) still open. Later weeks gated by doc 13 §1c. |
-| Application code | Not started. Week-1 foundation work may begin (scope: doc 14 §6; plain Docker Compose; no running AWS application resources; no real tenant data). |
+| Application code | Week-1 foundation on branch `week1/foundation` (not committed): .NET skeleton, architecture tests, Docker Compose, CI workflow, Angular workspace — all verified locally. AWS steps not started. |
 | Plan | Proposed: `docs/10-implementation-roadmap.md` §12 (not yet approved) |
 | Kickoff checklist | Draft: `docs/14-rev-0.3-baseline-and-kickoff.md` §6 |
 | Repo folders | `docs/` (complete), `src/backend`, `src/frontend`, `infrastructure/terraform`, `tests/` (empty) |
@@ -40,6 +40,8 @@ Menu Studio is a multi-tenant SaaS platform where US food businesses (restaurant
 | 13 | 2026-11-21 | Added **proposed** US pilot success criteria (doc 01 §11: S1–S14 + decision rule, not approved); added an explicit note to doc 10 §12.2 that the protected tests are unchanged by localization work. Presented the C1/C5 review checklist in chat (flagged: pilot = real tenants vs "before real tenants" items; pilot not scheduled in the 12 weeks; learning-environment deviations). Local drafts only. |
 | 14 | 2026-11-21 | Drafts: T1 = required gate before any real pilot tenant; external pen test = required gate before UAE commercial launch (docs 09, 10 §8, 11 T1, 14). Learning-environment risk assessment E1–E9 + safeguards G1–G12 (doc 04 §5.3, **not accepted**). Post-week-12 schedule (doc 10 §12.5: readiness → legal → onboarding → 6–8-week pilot → evaluation). Pilot criteria reviewed → 6 core measures CM1–CM6, diagnostics, gates, UAE validation track (doc 01 §11, proposed). C1, C5, statuses unchanged; not committed. |
 | 15 | 2026-11-21 | Decision list narrowed to week-1 blockers. **User confirmed W1** (week 1 may start while C1/C5 open), **W2** (week-1 scope only; no running AWS app resources, no real tenant data), **W3** (plain Docker Compose). Recorded in CLAUDE.md, doc 10 §12 note + §4, doc 11 C.0 + T3, doc 13 §1b–§1c (gates by week), doc 14 header + §6, README. No ADR status changed. Awaiting approval to commit/push. |
+| 16 | 2026-11-21 | Committed and pushed `9a74e0e`. **Week-1 work started** on branch `week1/foundation` (local, **not committed**). Done and verified locally: .NET 10 solution skeleton (8 modules × `X.Contracts` + `X`, hosts, building blocks); architecture tests (36 pass; an injected violation is caught); `compose.yaml` (PostgreSQL 18.6, DynamoDB Local 3.3.2, LocalStack 4.14.0, Mailpit 1.34.0) with smoke checks; `docs/architecture/versions.md`; `docs/architecture/library-licences.md` (research only); `.github/workflows/ci.yml` (not pushed, not run). **Findings:** AWS Health Dashboard says `me-central-1` is unable to reliably support customer applications (since 2026-03; latest update 2026-09-15) → ADR-17 blocker reported, ADR-17 unchanged (Proposed); LocalStack images after 2026-03-23 need an auth token. **Blocked:** Angular workspace waits for Node ≥ 24.15 (product owner updating). No AWS account changes. |
+| 17 | 2026-11-21 | Node 24.22.3 installed (winget, UAC by product owner). **Angular 22.3 workspace** (`admin`/`public`, prefixes `adm`/`pub`, strict) verified. ADR-17 evidence re-checked and recorded (versions.md §3.2: AWS 2026-04-30 and 2026-09-15 statements; documented fallback Option A); ADR-17 unchanged. LocalStack kept at 4.14.0 as a **temporary** local/CI test dependency, no token (product owner); limitations and reassessment triggers documented in versions.md §1.1 and the compose comment. Review of src structure; product owner approved: **rename to MenuX (code + docs)**, per-kind project-reference allowlist tests (78 tests pass, negative checks fail as expected), removal of empty layer folders/.gitkeep, `*.zip` ignored, Angular prefixes + explicit strict. `docs.zip` no longer on disk (not removed by Claude). Not committed. |
 
 ## 4. Decisions
 
@@ -57,7 +59,7 @@ Menu Studio is a multi-tenant SaaS platform where US food businesses (restaurant
 
 ## 6. Next steps
 
-1. Wait for explicit approval to commit/push the current drafts. Then start week 1 when the user says go (doc 14 §6). Before week 2, get the week-2 decisions in doc 13 §1c (C5, ADR-06, ADR-18, U4, U7) — each answered separately.
+1. Finish week 1: product owner reviews the `week1/foundation` diff; commit/push only on approval (then CI runs). AWS steps (root MFA, Identity Center, budgets, state bucket) wait for the product owner's answers on tools, account access, state-bucket region and budget email. Product owner to note the `me-central-1` blocker (versions.md §3.2) for the ADR-17 decision before week 9. Before week 2, get the week-2 decisions in doc 13 §1c (C5, ADR-06, ADR-18, U4, U7) — each answered separately.
 2. Week 1 per doc 14 §6 (git setup already done): version verification (`docs/architecture/versions.md`), library licences, .NET 10 solution skeleton + architecture tests, docker compose (PostgreSQL, DynamoDB Local, LocalStack S3, Keycloak, Mailpit), GitHub Actions CI, Angular workspace (`admin`, `public`), AWS hardening + budget alarms + Terraform state bucket.
 3. Update this file at the end of each week.
 

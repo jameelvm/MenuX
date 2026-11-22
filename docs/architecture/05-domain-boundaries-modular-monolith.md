@@ -66,13 +66,13 @@ Rev 0.2 names Catalog, Menu Authoring and Publishing as the DynamoDB domains, so
 
 ```
 src/backend/
-  MenuStudio.sln
+  MenuX.sln
   src/
     Host.Api/                     # ASP.NET Core host: composition root, auth, middleware
     Host.Worker/                  # Worker host: work-item pollers (leases), outbox dispatch, schedulers
     BuildingBlocks/
-      MenuStudio.SharedKernel/    # TenantId, Money, Result, domain event base — tiny, stable
-      MenuStudio.Infrastructure/  # Outbox, work items, DynamoItemWriter, EF base, tenant context
+      MenuX.SharedKernel/    # TenantId, Money, Result, domain event base — tiny, stable
+      MenuX.Infrastructure/  # Outbox, work items, DynamoItemWriter, EF base, tenant context
     Modules/
       Tenancy/
         Tenancy.Contracts/        # Public API of the module: commands, queries, integration events, DTOs
