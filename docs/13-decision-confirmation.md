@@ -74,6 +74,7 @@ ADR-17 and ADR-19 remain **Proposed** until the final approval step.
 | Budget | AWS budget alert | **Confirmed** | USD 25/month alert, not a cap; recipient = product owner's email, kept out of the repository |
 | State bucket | Terraform state | **Confirmed** | `us-east-1`; encryption, versioning, public access blocked |
 | L6 | Libraries | **Confirmed** | SkiaSharp (images), QRCoder (QR codes) |
+| AWS timing | When AWS work happens | **Confirmed 2026-11-22** | No AWS deployment until the final AWS phase (weeks 9–12): no state bucket, budget, OIDC provider, deployer role or test environment before then; no SSO profile or account ID needed yet; Terraform prepared locally (`fmt`/`validate` only); AWS-only checks pending (doc 10 §12.7) |
 
 C1 is therefore decided for **P3, P11, P13, P16** (approved) and **P8** (superseded). The other P-items stay open until their week in §1c.
 

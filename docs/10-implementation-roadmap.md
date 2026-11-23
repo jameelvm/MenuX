@@ -186,7 +186,7 @@ Rev 0.3 notes: Region `me-central-1` proposed (ADR-17; week-1 feasibility check 
 
 | Week | Theme | Core deliverables | Learning focus |
 |------|-------|-------------------|----------------|
-| 1 | Foundations | Version/library verification; `git init`; .NET 10 solution + architecture tests; docker compose; **CI (build + test)**; Angular workspace; AWS account hardening + budget alarm + Terraform state bucket; **`me-central-1` service/version check** (feasibility only; input to the ADR-17 region decision before the pilot environment) | 5, 2 |
+| 1 | Foundations | Version/library verification; `git init`; .NET 10 solution + architecture tests; docker compose; **CI (build + test)**; Angular workspace; ~~budget alarm + Terraform state bucket~~ (moved to week 9 by the product owner, 2026-11-22; §12.7); **`me-central-1` service/version check** (public sources) (feasibility only; input to the ADR-17 region decision before the pilot environment) | 5, 2 |
 | 2 | Identity & tenancy | BFF cookie session via Keycloak; provider-neutral identity; tenants, multiple locations, roles/permissions; **RLS**; tenant-status gate; audit; **cross-tenant test harness**; deletion framework skeleton; **minimal SQS: LocalStack `sqs`, transactional outbox relay, consumer with DLQ** (used by the deletion skeleton); OpenTelemetry locally | 4, 5 |
 | 3 | Catalog + media | `DynamoItemWriter` (tagging, no upserts); catalog + media tables with TenantIndex; items, modifiers, i18n maps; **market packs** (US pilot + UAE skeleton), canonical allergen codes + schemes, halal/pork/alcohol fields, Arabic name normalization; uploads + WebP (**media processing on the SQS `media` queue**, SkiaSharp); **coverage scan**; catalog/media purge | 1 |
 | 4 | Menu authoring | Menus, sections, placements, reorder, menu locking (header bumps META), location assignment, schedules (weekly + date-range overrides), sold-out flag; Angular admin editor with RTL support; menus purge | 1, 3 |
@@ -194,7 +194,7 @@ Rev 0.3 notes: Region `me-central-1` proposed (ADR-17; week-1 feasibility check 
 | 6 | Publishing robustness + QR | **Failure-injection suite**, reconciler, rollback (full state), unpublish, location deactivation; QR codes + QR/route projections; publishing purge | 1 |
 | 7 | Static public app | Prerendered shell + CSR, schedules, language switch, unavailable states, runtime UI dictionaries (`en` + `ar`), **Arabic/RTL** with Arabic font in budget, price-display policy; **Lighthouse + axe + RTL checks in CI** | 3, 5 |
 | 8 | Deletion/export + **local MVP-1 gate** | Deletion orchestration, supervisor, verification passes, S3 versions, identity handling, export; **all protected tests green** (§12.2) | 1, 4, 5 |
-| 9 | First AWS environment | Terraform: cost-reduced VPC, DynamoDB, RDS, S3, **SQS queues + DLQs**, two hostnames + CloudFront + Function, WAF (`us-east-1`), ECR, Fargate, ALB as a **temporary test deployment in `us-east-1`** (§12.6: deploy, test, tear down; only state storage and the budget alert persist). The ADR-17 pilot/launch region stays Proposed | 2 |
+| 9 | First AWS environment | **Start of the AWS phase (§12.7):** AWS SSO profile, bootstrap (state bucket + budget alert) from the locally prepared Terraform, pending AWS checks A3–A5. Terraform: cost-reduced VPC, DynamoDB, RDS, S3, **SQS queues + DLQs**, two hostnames + CloudFront + Function, WAF (`us-east-1`), ECR, Fargate, ALB as a **temporary test deployment in `us-east-1`** (§12.6: deploy, test, tear down; only state storage and the budget alert persist). The ADR-17 pilot/launch region stays Proposed | 2 |
 | 10 | Identity + delivery in AWS | Cognito via configuration; **CD with GitHub Actions OIDC**; Secrets Manager; DB migrations as a deployment step; token contract tests against Cognito | 2, 4, 5 |
 | 11 | Observability & operations | OpenTelemetry → CloudWatch/X-Ray; dashboards; alarms (5xx, SQS DLQ depth and oldest-message age, outbox relay backlog, stuck jobs, publish/manifest failures, purge failures, QR misses, budget); log retention; WAF rate rule | 5, 2 |
 | 12 | Production readiness | **PITR restore drills** (DynamoDB, RDS) + projection rebuild from scratch in AWS; public-path load test; security review against the checklist; runbooks (publish stuck, purge failed, restore); cost review; retrospective + phase-2 plan | 5, 4 |
@@ -246,6 +246,7 @@ AI menu import (ADR-15, still the first AI capability, behind human review) and 
 
 ### 12.6 Temporary AWS test deployments (product owner, 2026-11-21)
 
+- **When:** only in the final AWS phase (weeks 9–12); nothing is deployed to AWS before then (§12.7, 2026-11-22).
 - **Region:** `us-east-1` for test deployments (weeks 9–12 and any later test runs). This is a test region only; it is **not** the ADR-17 pilot/launch region decision, and ADR-17 stays Proposed.
 - **Lifecycle:** deploy for a test run, run the tests (including the week-12 restore drills), then **tear the test resources down**. Database data may be discarded. Test deployments are **not production-ready** and never hold real tenant data.
 - **What persists between runs:** only what test runs need: the Terraform state bucket and the AWS budget alert (separate `bootstrap` Terraform configuration). Everything else belongs to the destroyable `test` configuration.
@@ -255,3 +256,23 @@ AI menu import (ADR-15, still the first AI capability, behind human review) and 
   3. Test-only settings so teardown completes: RDS `deletion_protection = false` and `skip_final_snapshot = true`; DynamoDB deletion protection off; test S3 buckets `force_destroy = true`; ECR `force_delete = true`.
   4. After destroy, a leftover check lists anything still tagged `project = menux, environment = test` (Resource Groups Tagging API) and reports it; nothing outside those tags is touched.
 - **Cost guard:** the $25/month budget alert is a notification, not a spending cap; teardown after each run is the real cost control.
+
+### 12.7 AWS work happens only in the final AWS phase (product owner, 2026-11-22)
+
+- **No AWS resources before the final AWS phase (weeks 9–12, the end of the project).** Nothing is deployed and no `terraform apply` runs before then: no state bucket, budget alert, GitHub OIDC provider, IAM deployer role or test environment.
+- **No AWS access needed before then:** no AWS SSO profile, account ID or AWS credentials are required for weeks 2–8.
+- **Terraform is prepared locally:** `infrastructure/terraform/bootstrap` and `infrastructure/terraform/test` are written and checked offline with `terraform fmt -check` and `terraform validate` (after `terraform init -backend=false`, which downloads providers but doesn't touch AWS). No `terraform plan` against AWS.
+- **Local development and testing continue** on the Docker stack (PostgreSQL, DynamoDB Local, LocalStack S3/SQS, Keycloak, Mailpit).
+- **Pending until the final AWS phase** (each marked "pending AWS" where it appears):
+
+| # | Item | Done in |
+|---|------|---------|
+| A1 | AWS SSO profile `menux` and the account ID (existing account; root MFA and Identity Center confirmed by the product owner) | Start of week 9 |
+| A2 | Bootstrap: Terraform state bucket (`us-east-1`, encryption, versioning, public access blocked) and the USD 25/month budget alert | Start of week 9 |
+| A3 | PostgreSQL version check: RDS PostgreSQL 18 available in `us-east-1` (`aws rds describe-db-engine-versions`) | Week 9, before the RDS Terraform |
+| A4 | `terraform plan`/`apply` for bootstrap and test; first test deployment and teardown | Week 9 |
+| A5 | LocalStack vs AWS behaviour (S3 conditional writes and versioning, SQS DLQ and redrive) confirmed against real AWS | Weeks 9–10 |
+| A6 | GitHub OIDC provider and deployer role for the test pipeline (proposal pending product-owner decision) | Week 10 |
+| A7 | Cognito token contract tests against real Cognito | Week 10 |
+| A8 | Restore drills and projection rebuild in AWS | Week 12 |
+| A9 | `me-central-1` account-level checks (opt-in region, RDS versions there) | Before the pilot environment (ADR-17) |

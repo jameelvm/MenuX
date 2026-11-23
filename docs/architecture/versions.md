@@ -12,7 +12,7 @@ Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation.
 | Test runner | Microsoft Testing Platform | `src/backend/global.json` (`test.runner`) | xUnit v3 4.x no longer supports the VSTest target on the .NET 10 SDK | `dotnet test --solution src/backend/MenuX.slnx` |
 | xUnit | xunit.v3 **4.0.3** | `Directory.Packages.props` | NuGet | Test projects only |
 | Architecture tests | TngTech.ArchUnitNET.xUnitV3 **0.13.5** (Apache-2.0) | `Directory.Packages.props` | NuGet | Doc 05 §2 names NetArchTest or ArchUnitNET; NetArchTest.Rules has had no release since 1.3.2 |
-| PostgreSQL (Docker) | **postgres:18.6-alpine** | `compose.yaml` | RDS for PostgreSQL release calendar: latest major **18** (18.1 GA 2025-11-14; latest minor listed **18.6**, 2026-08-25). Community PostgreSQL 19.0 is out, but RDS is not offering 19 yet (RDS adds a major within 30 days of x.1) | Same major as RDS, as doc 10 §3 requires. Npgsql 10.0.4 targets net10.0 and supports PostgreSQL 18. |
+| PostgreSQL (Docker) | **postgres:18.6-alpine** | `compose.yaml` | RDS for PostgreSQL release calendar: latest major **18** (18.1 GA 2025-11-14; latest minor listed **18.6**, 2026-08-25). Community PostgreSQL 19.0 is out, but RDS is not offering 19 yet (RDS adds a major within 30 days of x.1) | Same major as RDS, as doc 10 §3 requires. Npgsql 10.0.4 targets net10.0 and supports PostgreSQL 18. **RDS PostgreSQL 18 availability in `us-east-1` (the test region): pending AWS**, checked with `aws rds describe-db-engine-versions` in the final AWS phase (doc 10 §12.7, A3). |
 | DynamoDB Local | **amazon/dynamodb-local:3.3.2** | `compose.yaml` | Docker Hub | Verified locally: conditional `TransactWriteItems` (a repeated write is cancelled with `ConditionalCheckFailed`) and a keys-only GSI query |
 | LocalStack (S3) | **localstack/localstack:4.14.0** | `compose.yaml` | LocalStack blog: since **2026-03-23** the LocalStack image requires an auth token (free "Hobby" tier needs an account; CI credits not included) | Verified locally: 4.14.0 starts **without** a token; S3 bucket versioning works; `PUT` with `If-None-Match: *` returns 200, then **412** on repeat. Pinned images get no backported fixes. **Decision needed** (§4). |
 | Mailpit | **axllent/mailpit:v1.34.0** | `compose.yaml` | Docker Hub | Verified locally: SMTP message received |
@@ -58,7 +58,7 @@ Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation.
 | Npgsql EF Core provider | **10.0.4** (net10.0) | NuGet | Matches EF Core 10 |
 | AWS SDK for .NET | v4: AWSSDK.DynamoDBv2 **4.1.0.3**, AWSSDK.S3 **4.1.2**, AWSSDK.SecurityToken **4.1.1.1** | NuGet | Current major is v4 |
 | Keycloak | **26.8.2** | Docker Hub `keycloak/keycloak` | Recorded only; Keycloak is added in week 2 after ADR-06 |
-| Terraform + AWS provider | Not checked locally | — | Terraform isn't installed on this machine; checked when the AWS bootstrap step is approved |
+| Terraform + AWS provider | Terraform **1.17.2** (installed locally 2026-11-21; HashiCorp binary, GPG signature and SHA-256 verified); `hashicorp/aws` **6.73.0** (latest, 2026-11-11) | releases.hashicorp.com; registry.terraform.io | Nothing pinned in the repository or CI yet. Pin `required_version = "~> 1.17.0"` and provider `~> 6.73` with a committed `.terraform.lock.hcl` when the configuration is prepared; S3 native state locking (`use_lockfile`). Checked offline only (`fmt`, `validate`); **no AWS calls until the final AWS phase** |
 | Anthropic SDK for C# | — | — | Phase 2 |
 
 ## 3. `me-central-1` feasibility check (public AWS sources only)
@@ -130,6 +130,7 @@ Scope: feasibility only, as input to the ADR-17 region decision before the pilot
 2. **Local S3 emulator** (§1): staying on LocalStack 4.14.0 means a frozen image with no further fixes. 4.14.0 is the last SemVer release; later releases use calendar versions and need a token. The Community GitHub repository was archived on 2026-03-23, and LocalStack says Community gets no further updates or security patches. The alternatives are a free LocalStack Hobby account and token (an account, and the token becomes a CI secret) or another emulator. [R] Keep 4.14.0 for MVP-1 local development and tests, because conditional writes and versioning (the features the publish flow needs) were verified. Temporary; see §1.1 for its limitations and the reassessment triggers. No image switch and no token without the product owner's approval.
 3. **Node.js**: done, 24.22.3 installed locally and pinned in `src/frontend/.nvmrc`.
 4. **.NET SDK**: update locally to 10.0.404 (optional security patch), then raise `global.json`.
+5. **AWS-only checks** (RDS PostgreSQL 18 in `us-east-1`, Terraform plan, LocalStack vs AWS behaviour, `me-central-1` account-level checks): **pending until the final AWS phase** (doc 10 §12.7; product owner, 2026-11-22).
 
 ## 5. Sources
 

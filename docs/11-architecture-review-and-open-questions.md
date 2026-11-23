@@ -185,6 +185,7 @@ W1: week-1 foundation work may start while C1 and C5 remain open. W2: week-1 sco
 | Budget | AWS budget alert | **USD 25/month** alert (not a cap) to the product owner's email (kept out of the repository) |
 | State bucket | Terraform state | `us-east-1`; encryption, versioning, public access blocked |
 | Libraries (L6) | Image processing, QR codes | **SkiaSharp** (MIT) and **QRCoder** (MIT) |
+| AWS timing (2026-11-22) | When AWS resources are created | **Only in the final AWS phase (weeks 9–12).** Until then Terraform is prepared and validated locally; no AWS resources, SSO profile, account ID or credentials; AWS-only checks pending (doc 10 §12.7) |
 
 Still open: C1 for the remaining P-items (by the week in doc 13 §1c), C4, ADR-17 (Proposed; region decision before the pilot environment), and every other Proposed ADR.
 

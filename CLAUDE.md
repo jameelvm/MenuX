@@ -28,6 +28,7 @@ Single-developer learning project, **~20 h/week, local-first** (Docker: PostgreS
 - Guest path fully static on a separate public hostname; admin and API on the app hostname with a BFF cookie session.
 - `CURRENT` in the Publishing table is the single source of truth for what's live; per-menu `ACTIVEJOB` lock; guarded commit transaction; public files are rebuildable projections.
 - Infrastructure only through Terraform; no static AWS keys.
+- **No AWS resources or AWS calls before the final AWS phase (weeks 9–12; product owner, 2026-11-22):** no `terraform apply`/`plan` against AWS, no SSO profile or account ID needed; prepare Terraform locally (`fmt`, `validate` with `init -backend=false`); mark AWS-only checks "pending AWS" (doc 10 §12.7). Never use the existing `~/.aws` credentials.
 - **AWS test deployments (2026-11-21):** `us-east-1`, temporary (deploy, test, tear down; data discardable; not production-ready). Persistent: only the Terraform state bucket and the budget alert (`infrastructure/terraform/bootstrap`). Destroy only the `test` configuration; every test resource tagged `project=menux`, `environment=test`. Not the ADR-17 region decision. Never write personal contact details (e.g. the budget email) into the repository; use git-ignored `*.tfvars`.
 
 ## Key docs
