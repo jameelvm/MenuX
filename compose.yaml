@@ -12,10 +12,15 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:?copy .env.example to .env}
       POSTGRES_USER: ${POSTGRES_USER:?copy .env.example to .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+      # Roles created on first start (infrastructure/local/postgres/01-roles.sh).
+      MENUX_OWNER_PASSWORD: ${MENUX_OWNER_PASSWORD:?copy .env.example to .env}
+      MENUX_APP_PASSWORD: ${MENUX_APP_PASSWORD:?copy .env.example to .env}
+      MENUX_PLATFORM_PASSWORD: ${MENUX_PLATFORM_PASSWORD:?copy .env.example to .env}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql
+      - ./infrastructure/local/postgres/01-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s

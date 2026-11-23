@@ -22,6 +22,8 @@ Revision 0.2: ordering/payments out of MVP-1 (design kept, schemas not created);
 - **PostgreSQL version:** the latest major supported by **both** Amazon RDS and the Npgsql EF Core provider for .NET 10. This is **verified when preparing the implementation environment** (doc 10 §3), not fixed here. The same major runs locally in Docker.
 - Primary keys: `uuid` (UUIDv7, sortable by time, generated in the app) named `id`.
 - **Every tenant-owned table has `tenant_id uuid NOT NULL`**, and foreign keys between tenant-owned tables are **composite `(tenant_id, id)`**, so a row can't reference another tenant's row even if the app has a bug.
+- [D] (week 2, 2026-11-22) **No foreign keys across module schemas** (doc 05 §3 rule 2): e.g. `identity.memberships.tenant_id` and `identity.membership_locations.location_id` hold Tenancy IDs as plain values, validated through the Tenancy contract. Composite FKs apply within a schema.
+- [D] **Migrations are SQL-first** (embedded scripts per module, applied by `MenuX.Host.Migrator` as `menux_owner`, recorded with checksums in `migrations.applied_scripts`); EF Core maps the tables but doesn't generate migrations, because grants and RLS policies are SQL anyway.
 - Money: `bigint` **minor units** + `char(3)` ISO-4217 currency. Never `float`; `numeric` is acceptable but minor units avoid rounding ambiguity.
 - Timestamps: `timestamptz`, UTC. Venue local time is computed from `locations.timezone`.
 - `created_at`, `updated_at`, `row_version` (`xmin` or explicit int for EF Core concurrency).

@@ -32,6 +32,7 @@ internal static class Modules
         typeof(Infrastructure.InfrastructureAssembly).Assembly,
         Assembly.Load("MenuX.Host.Api"),
         Assembly.Load("MenuX.Host.Worker"),
+        Assembly.Load("MenuX.Host.Migrator"),
         typeof(Tenancy.TenancyModule).Assembly,
         typeof(Tenancy.Contracts.TenancyContractsAssembly).Assembly,
         typeof(Identity.IdentityModule).Assembly,

@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Shared technical plumbing: outbox, work items, tenant context, EF base. DynamoItemWriter is added in week 3 (after ADR-09). No module references. -->
+  <!-- Shared technical plumbing: tenant context, PostgreSQL session/RLS interceptor, SQL migrations; later outbox, SQS messaging. DynamoItemWriter is added in week 3 (after ADR-09). No module references. -->
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="EFCore.NamingConventions" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MenuX.SharedKernel\MenuX.SharedKernel.csproj" />
   </ItemGroup>

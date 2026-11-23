@@ -79,6 +79,10 @@ CREATE POLICY tenant_isolation ON ordering.orders
 - If `app.tenant_id` isn't set, `current_setting(..., true)` returns NULL → **no rows**, so the failure mode is safe.
 - Platform/cross-tenant jobs (billing runs, reporting) use a separate role with BYPASSRLS, used only by specific worker jobs, and audited.
 - Migrations run as the owner role in a separate deployment step.
+- [D] Implementation notes (week 2, 2026-11-22):
+  - **Roles:** `menux_owner` (schemas, migrations), `menux_app` (no BYPASSRLS, owns nothing), `menux_platform` (BYPASSRLS, platform jobs only), `menux_rls_definer` (NOLOGIN, BYPASSRLS; owns narrow `SECURITY DEFINER` functions such as the sign-in lookup `identity.find_user_id`, because forced RLS also applies to the schema owner). The app role is a member of none of them (tested).
+  - **Every EF Core context uses a transaction:** `TenantScopedDbContext` sets `AutoTransactionBehavior.Always`, because EF Core skips the transaction for single-statement `SaveChanges`, and `SET LOCAL` would then not apply. `TransactionRequiredInterceptor` rejects any command outside a transaction, so a missing transaction fails loudly instead of silently returning no rows; reads use `InTenantTransactionAsync`.
+  - **Second setting `app.user_id`:** lets a signed-in user list their own memberships (tenant picker) before a tenant is selected, without a privileged role.
 
 ### 4.3 DynamoDB fine-grained access
 - The API task role has **no blanket DynamoDB access to tenant tables** (target state). For tenant-scoped requests, the repository layer uses credentials scoped down with an **STS session policy**:

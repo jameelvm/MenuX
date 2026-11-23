@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Host.Api\MenuX.Host.Api.csproj" />
     <ProjectReference Include="..\..\src\Host.Worker\MenuX.Host.Worker.csproj" />
+    <ProjectReference Include="..\..\src\Host.Migrator\MenuX.Host.Migrator.csproj" />
     <ProjectReference Include="..\..\src\Modules\Tenancy\MenuX.Tenancy\MenuX.Tenancy.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\MenuX.Identity\MenuX.Identity.csproj" />
     <ProjectReference Include="..\..\src\Modules\Catalog\MenuX.Catalog\MenuX.Catalog.csproj" />

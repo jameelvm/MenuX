@@ -7,6 +7,9 @@
   <Folder Name="/src/Host.Api/">
     <Project Path="src/Host.Api/MenuX.Host.Api.csproj" />
   </Folder>
+  <Folder Name="/src/Host.Migrator/">
+    <Project Path="src/Host.Migrator/MenuX.Host.Migrator.csproj" />
+  </Folder>
   <Folder Name="/src/Host.Worker/">
     <Project Path="src/Host.Worker/MenuX.Host.Worker.csproj" />
   </Folder>
@@ -45,5 +48,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MenuX.ArchitectureTests/MenuX.ArchitectureTests.csproj" />
+    <Project Path="tests/MenuX.IntegrationTests/MenuX.IntegrationTests.csproj" />
   </Folder>
 </Solution>

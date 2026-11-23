@@ -4,7 +4,13 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Test-only packages (week 1). Runtime packages (EF Core, Npgsql, AWS SDK) are added when first used. -->
+    <!-- Runtime: PostgreSQL (week 2). EF Core 10.x only: EF Core 11 targets net11.0. -->
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.4" />
+    <PackageVersion Include="EFCore.NamingConventions" Version="10.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Test-only packages. -->
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="TngTech.ArchUnitNET.xUnitV3" Version="0.13.5" />
   </ItemGroup>

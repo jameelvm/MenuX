@@ -95,6 +95,7 @@ public sealed class ProjectReferenceTests
     [Theory]
     [InlineData("MenuX.Host.Api")]
     [InlineData("MenuX.Host.Worker")]
+    [InlineData("MenuX.Host.Migrator")]
     public void Host_references_only_modules_and_building_blocks(string host)
     {
         var allowed = new HashSet<string>(StringComparer.Ordinal) { SharedKernel, Infrastructure };
