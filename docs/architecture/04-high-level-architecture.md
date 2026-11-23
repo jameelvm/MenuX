@@ -1,7 +1,7 @@
 # 04 — High-Level Architecture
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
-**Revision 0.3 (DRAFT, pending approval — doc 13):** market packs and `me-central-1` (draft 2026-11-21); two hostnames (§3); background jobs on Amazon SQS via a transactional outbox relay, no Streams (ADR-18, accepted 2026-11-21); publish flow rewritten with the per-menu lock, tenant guard, MANIFEST lease, UNPUBLISH, full-state rollback and cache table (§4.1); QR edge check (§4.2); sold-out overlay and AI in phase 2 (§4.3–4.4); region `me-central-1` proposed (week-1 feasibility/service verification only; region decision before week 9) (§5.1); public-app amendments (§6.2); BFF (§6.5).
+**Revision 0.3 (DRAFT, pending approval — doc 13):** market packs and `me-central-1` (draft 2026-11-21); two hostnames (§3); background jobs on Amazon SQS via a transactional outbox relay, no Streams (ADR-18, accepted 2026-11-21); publish flow rewritten with the per-menu lock, tenant guard, MANIFEST lease, UNPUBLISH, full-state rollback and cache table (§4.1); QR edge check (§4.2); sold-out overlay and AI in phase 2 (§4.3–4.4); region `me-central-1` proposed (week-1 feasibility/service verification only; region decision before the pilot environment) (§5.1); public-app amendments (§6.2); BFF (§6.5).
 Revision 0.2: fully static public path (§3, §4.2); authoritative publication pointer, publish state machine and failure handling (§4.1); public app hosting resolved, static prerendering vs. dynamic SSR (§6.2); .NET 10; production topology vs. learning environment (§5).
 
 ---
@@ -234,7 +234,7 @@ Design kept for phase 2. Admin uploads a photo/PDF (stored at `t/{tenantId}/ai-i
 | Aspect | Recommendation [R] |
 |--------|--------------------|
 | AWS accounts | AWS Organizations: `management`, `security/log-archive`, `shared-services` (ECR, CI roles), `dev`, `staging`, `prod`. |
-| Region | ADR-17 (draft): single environment in **`me-central-1`** (UAE) from week 9 for the US pilot and the UAE launch. Week 1: feasibility/service check only (no commitment); **region decision before week 9**. If anything is missing, the blocker and fallback (`us-east-1`) go to the product owner before the decision changes. Terraform region-parameterized; `tenants.home_region`; CloudFront certificate and WAF in `us-east-1` (AWS requirement). US pilot users are told their data is stored in the UAE. Multi-AZ in production. |
+| Region | ADR-17 (draft): single environment in **`me-central-1`** (UAE) for the pilot environment and the UAE launch (weeks 9–12 use temporary `us-east-1` test deployments, doc 10 §12.6). Week 1: feasibility/service check only (no commitment); **region decision before the pilot environment**. If anything is missing, the blocker and fallback (`us-east-1`) go to the product owner before the decision changes. Terraform region-parameterized; `tenants.home_region`; CloudFront certificate and WAF in `us-east-1` (AWS requirement). US pilot users are told their data is stored in the UAE. Multi-AZ in production. |
 | Network | VPC with public subnets (ALB, NAT) and private subnets (ECS, RDS). VPC endpoints for S3, DynamoDB, Secrets Manager, ECR to reduce NAT costs. |
 | Compute | ECS Fargate (API: min 2 tasks across AZs; Worker: autoscale on queue depth). |
 | CI/CD | GitHub Actions (assumed; confirm) using OIDC to assume AWS roles, no static keys. Build → test → container image to ECR → Terraform plan/apply → ECS rolling/blue-green deploy. |

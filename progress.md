@@ -48,7 +48,7 @@ MenuX is a multi-tenant SaaS platform where US food businesses (restaurants, caf
 ## 4. Decisions
 
 - **Accepted (Rev 0.2):** ADR-01, 02, 03, 07, 12, 13, 14, 16.
-- **Proposed, pending confirmation:** ADR-04, 05, 06, 08, 09, 10, 11, 15, 17 (US pilot → UAE launch; `me-central-1` proposed, region decision before week 9), 18, 19 (market packs); P1–P21; roadmap doc 10 §12.
+- **Proposed, pending confirmation:** ADR-04, 05, 06, 08, 09, 10, 11, 15, 17 (US pilot → UAE launch; `me-central-1` proposed, region decision before the pilot environment), 18, 19 (market packs); P1–P21; roadmap doc 10 §12.
 - **Market strategy (draft, user input 2026-11-21):** US = pilot/validation market; UAE = target commercial launch market.
 - **Accepted 2026-11-21:** ADR-06 (Fargate, Cognito/Keycloak, BFF, provider-neutral identity), ADR-18 (Amazon SQS via outbox relay, DLQs, idempotent handlers, SNS later). **Approved:** C5, U4/P13, U7/P16. **Superseded:** P8, F1.
 - **Draft refinements awaiting approval (doc 14 §3, F1–F7):** ~~no SQS~~ (F1 superseded by ADR-18); manifest builds serialized by a MANIFEST lease (FIFO removed, PUB-2 resolved); no DynamoDB Streams (transactional outbox items); 90 locations per menu; explicit intentional upserts; GSI1 name truncation; US defaults (USD, en-US, FDA nine allergens, optional calories field).
@@ -58,11 +58,11 @@ MenuX is a multi-tenant SaaS platform where US food businesses (restaurants, caf
 - L1–L2: legal review of the 30-day grace period (**provisional**) and retention periods.
 - L3: US food-information rules (allergen notices, calorie labeling for chains with 20+ locations), ideally before week 3.
 - L4: ADA Title III accessibility. L5: US state privacy laws, privacy policy, sub-processors. L6: library licences (week 1).
-- ADR-17 region confirmation (before week 9). U8, U9, U10, T1, T3, T4, T5 (doc 11 Part C.2).
+- ADR-17 region confirmation (before the pilot environment). U8, U9, U10, T1, T3, T4, T5 (doc 11 Part C.2).
 
 ## 6. Next steps
 
-1. Finish week 1: product owner reviews the `week1/foundation` diff; commit/push only on approval (then CI runs). AWS steps (root MFA, Identity Center, budgets, state bucket) wait for the product owner's answers on tools, account access, state-bucket region and budget email. Product owner to note the `me-central-1` blocker (versions.md §3.2) for the ADR-17 decision before week 9. Before week 2, get the week-2 decisions in doc 13 §1c (C5, ADR-06, ADR-18, U4, U7) — each answered separately.
+1. Finish week 1: product owner reviews the `week1/foundation` diff; commit/push only on approval (then CI runs). AWS steps (root MFA, Identity Center, budgets, state bucket) wait for the product owner's answers on tools, account access, state-bucket region and budget email. Product owner to note the `me-central-1` blocker (versions.md §3.2) for the ADR-17 decision before the pilot environment. Before week 2, get the week-2 decisions in doc 13 §1c (C5, ADR-06, ADR-18, U4, U7) — each answered separately.
 2. Week 1 per doc 14 §6 (git setup already done): version verification (`docs/architecture/versions.md`), library licences, .NET 10 solution skeleton + architecture tests, docker compose (PostgreSQL, DynamoDB Local, LocalStack S3, Keycloak, Mailpit), GitHub Actions CI, Angular workspace (`admin`, `public`), AWS hardening + budget alarms + Terraform state bucket.
 3. Update this file at the end of each week.
 

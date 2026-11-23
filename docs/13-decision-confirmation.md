@@ -87,8 +87,8 @@ C1 is therefore decided for **P3, P11, P13, P16** (approved) and **P8** (superse
 | 5 | ADR-10 (publishing — P6, PUB-1…14, F4); P17/U11 (no approval workflow); ADR-04 (static guest path, manifest TTL — P1, P9) |
 | 6 | ADR-11 (QR, rate limits, alarm-only blocking — P7, P10) |
 | 7 | ADR-05 public app (P2) |
-| 9 | ADR-17 region decision (informed by the week-1 feasibility check); G2 pilot-account choice (recommended by then) |
-| Pilot | §12.5 schedule; G1–G12 checklist; each residual risk E-3a…E-3e accepted separately (doc 04 §5.3); success measures CM1–CM6 |
+| 9 | Test deployments in `us-east-1` (decided 2026-11-21, doc 10 §12.6); G2 pilot-account choice (recommended by then) |
+| Pilot | **ADR-17 region decision, before the pilot environment** (§12.5 phase A; informed by the week-1 feasibility check and current AWS status); §12.5 schedule; G1–G12 checklist; each residual risk E-3a…E-3e accepted separately (doc 04 §5.3); success measures CM1–CM6 |
 | Phase 2 | ADR-08, ADR-15 |
 
 ## 2. Requires your explicit confirmation
@@ -100,7 +100,7 @@ None of these blocks week-1 foundation work (W1, §1b). Each is needed only by t
 | C1 | **Formal approval** of P1–P21 | Approve all / list exceptions, or decide item by item | Not needed for week 1. Each part is needed by the week listed in §1c (from week 2); all of it before the Rev 0.3 baseline is published | Turns proposals into the baseline |
 | C2 | ~~U12 weekly hours~~ | **Answered: ~20 h/week** → P20 | — | — |
 | C3 | ~~U12 learning priorities~~ | **Answered** → P20 | — | — |
-| C4 | **Markets** | **Draft (draft 2026-11-21):** pilot/validation = United States; target commercial launch = UAE; region `me-central-1` proposed (ADR-17; region decision before week 9). Pending final approval | Not needed for week 1 (the `me-central-1` check is a week-1 task under W2). Markets and market packs before week 3; region before week 9 (§1c) | Region, data residency, languages, currency, allergen scheme, legal tracks |
+| C4 | **Markets** | **Draft (draft 2026-11-21):** pilot/validation = United States; target commercial launch = UAE; region `me-central-1` proposed (ADR-17; region decision before the pilot environment). Pending final approval | Not needed for week 1 (the `me-central-1` check is a week-1 task under W2). Markets and market packs before week 3; region before the pilot environment (§1c) | Region, data residency, languages, currency, allergen scheme, legal tracks |
 | C5 | ~~Roadmap doc 10 §12~~ | **Answered 2026-11-21: weeks 2–12 approved as written** (§1d). The §12.5 pilot schedule is still decided before the pilot (§1c) | — | — |
 
 ## 3. Requires legal or market research

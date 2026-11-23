@@ -42,7 +42,7 @@ Every requirement is tagged with where it came from:
 4. **Complete tenant deletion** via TenantIndex, a single tagging writer, a tenant guard, verification passes and a supervisor (ADR-09).
 5. **Background jobs on Amazon SQS via a transactional outbox relay; no DynamoDB Streams in MVP-1; SNS later** (ADR-18, accepted 2026-11-21).
 6. **BFF cookie session** with Keycloak locally and Cognito in AWS (ADR-06).
-7. **Markets (draft):** US pilot/validation → UAE commercial launch; market packs with nothing market-specific hard-coded (ADR-19); region `me-central-1` proposed (ADR-17; week-1 feasibility check only, region decision before week 9).
+7. **Markets (draft):** US pilot/validation → UAE commercial launch; market packs with nothing market-specific hard-coded (ADR-19); region `me-central-1` proposed (ADR-17; week-1 feasibility check only, region decision before the pilot environment).
 8. **MVP-1 excludes** ordering, online payments, SaaS billing, retail inventory and AI (AI menu import is the first phase-2 capability).
 9. **12 weeks at ~20 h/week:** local MVP-1 + first AWS environment; protected tests never cut (doc 10 §12).
 

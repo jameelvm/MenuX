@@ -176,7 +176,7 @@ Cut lines (§6) still apply. Adjusted: if behind at the end of week 6, rollback 
 
 **Approved 2026-11-21 (C5, doc 13 §1d):** weeks 2–12 as written below. Planned work is **not** moved, deferred or removed because of the available time. If the work runs behind, the **end date slips** and the order is kept (§12.3). Background jobs use **Amazon SQS** via a transactional outbox relay (ADR-18, accepted 2026-11-21); the SQS items below follow from that decision and don't move any work.
 
-Rev 0.3 notes: Region `me-central-1` proposed (ADR-17; week-1 feasibility check only, region decision before week 9). Market packs and Arabic/RTL add about 3–5 days. **The protected tests are not squeezed**: if the work doesn't fit, the timeline moves (§12.3).
+Rev 0.3 notes: Region `me-central-1` proposed (ADR-17; week-1 feasibility check only, region decision before the pilot environment). Market packs and Arabic/RTL add about 3–5 days. **The protected tests are not squeezed**: if the work doesn't fit, the timeline moves (§12.3).
 
 **Week 1 approved (W1–W3, 2026-11-21):** week-1 foundation work may start (C5 has since been approved for weeks 2–12). Scope: the week-1 row below, **without** Keycloak (week 2, after ADR-06) and **without** the `DynamoItemWriter` and its architecture rule (week 3, after ADR-09). No running AWS application resources and no real tenant data. Local orchestration: plain Docker Compose. Later weeks are gated by doc 13 §1c.
 
@@ -186,7 +186,7 @@ Rev 0.3 notes: Region `me-central-1` proposed (ADR-17; week-1 feasibility check 
 
 | Week | Theme | Core deliverables | Learning focus |
 |------|-------|-------------------|----------------|
-| 1 | Foundations | Version/library verification; `git init`; .NET 10 solution + architecture tests; docker compose; **CI (build + test)**; Angular workspace; AWS account hardening + budget alarm + Terraform state bucket; **`me-central-1` service/version check** (feasibility only; input to the ADR-17 region decision before week 9) | 5, 2 |
+| 1 | Foundations | Version/library verification; `git init`; .NET 10 solution + architecture tests; docker compose; **CI (build + test)**; Angular workspace; AWS account hardening + budget alarm + Terraform state bucket; **`me-central-1` service/version check** (feasibility only; input to the ADR-17 region decision before the pilot environment) | 5, 2 |
 | 2 | Identity & tenancy | BFF cookie session via Keycloak; provider-neutral identity; tenants, multiple locations, roles/permissions; **RLS**; tenant-status gate; audit; **cross-tenant test harness**; deletion framework skeleton; **minimal SQS: LocalStack `sqs`, transactional outbox relay, consumer with DLQ** (used by the deletion skeleton); OpenTelemetry locally | 4, 5 |
 | 3 | Catalog + media | `DynamoItemWriter` (tagging, no upserts); catalog + media tables with TenantIndex; items, modifiers, i18n maps; **market packs** (US pilot + UAE skeleton), canonical allergen codes + schemes, halal/pork/alcohol fields, Arabic name normalization; uploads + WebP (**media processing on the SQS `media` queue**, SkiaSharp); **coverage scan**; catalog/media purge | 1 |
 | 4 | Menu authoring | Menus, sections, placements, reorder, menu locking (header bumps META), location assignment, schedules (weekly + date-range overrides), sold-out flag; Angular admin editor with RTL support; menus purge | 1, 3 |

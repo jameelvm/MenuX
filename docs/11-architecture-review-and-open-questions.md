@@ -29,7 +29,7 @@ ADR statuses: **Accepted** · **Proposed** · **Superseded**.
 | 14 | Food businesses first; no retail inventory | **Accepted** (Rev 0.2) | 0.2 |
 | 15 | First AI capability: menu import (behind human review) — **phase 2** | **Proposed** (pending product confirmation) | 0.3 |
 | 16 | Single-developer, local-first delivery | **Accepted** (Rev 0.2) | 0.2 |
-| 17 | Markets (US pilot → UAE launch) and hosting region | **Proposed** (draft 2026-11-21): US pilot, UAE target; `me-central-1` proposed (region decision before week 9) | new 0.3 |
+| 17 | Markets (US pilot → UAE launch) and hosting region | **Proposed** (draft 2026-11-21): US pilot, UAE target; `me-central-1` proposed (region decision before the pilot environment) | new 0.3 |
 | 18 | Background jobs on Amazon SQS via transactional outbox; SNS later | **Accepted** (2026-11-21, product owner; rewritten, supersedes the poller-only draft and P8) | new 0.3 |
 | 19 | Market-neutral core with market packs | **Proposed** (draft 2026-11-21) | new 0.3 |
 
@@ -102,11 +102,11 @@ ADR statuses: **Accepted** · **Proposed** · **Superseded**.
 
 ### ADR-17: Markets and hosting region
 - **Status:** **Proposed** (draft 2026-11-21; part of C4, pending final approval).
-- **Decision:** **Pilot/validation market: United States** (US restaurants, pilot terms). **Target commercial launch market: United Arab Emirates.** Hosting (**proposed**): a single environment in **`me-central-1`** (UAE) from week 9 for the US pilot and then the UAE launch. Week 1 is **feasibility/service verification only** (checking that every required AWS service and version is available there), with no region commitment; the **region decision is due before week 9**. If anything is missing, the specific blocker and the fallback (Option A: `us-east-1` for the pilot, a UAE deployment later) go to the product owner before the decision changes.
+- **Decision:** **Pilot/validation market: United States** (US restaurants, pilot terms). **Target commercial launch market: United Arab Emirates.** Hosting (**proposed**): a single environment in **`me-central-1`** (UAE) for the **pilot environment** (doc 10 §12.5 phase A) and then the UAE launch. Weeks 9–12 use temporary `us-east-1` test deployments, which don't depend on this decision (doc 10 §12.6). Week 1 is **feasibility/service verification only** (checking that every required AWS service and version is available there), with no region commitment; the **region decision is due before the pilot environment** (doc 10 §12.5 phase A; changed from "before week 9" on 2026-11-21 because test deployments now use `us-east-1`). If anything is missing, the specific blocker and the fallback (Option A: `us-east-1` for the pilot, a UAE deployment later) go to the product owner before the decision changes.
 - **Requirements regardless of region:** Terraform takes the region as a parameter, nothing hard-coded; `tenants.home_region`; CloudFront certificate and CloudFront-scope WAF in `us-east-1` (AWS requirement); no region-specific features.
 - **Disclosure:** US pilot users are told their data is stored in the UAE.
 - **Trade-offs:** validates the target region early and avoids a migration; admin portal latency for US pilot staff is roughly 200–250 ms; AWS prices are somewhat higher; guests are served from CloudFront edges, so guest latency is unaffected.
-- **Needed by:** week 1 — feasibility/service check only (no region commitment); before week 9 — region decision, ahead of deployment.
+- **Needed by:** week 1 — feasibility/service check only (no region commitment); before the pilot environment (doc 10 §12.5 phase A) — region decision, ahead of the pilot deployment.
 
 ### ADR-18: Background jobs on Amazon SQS via a transactional outbox; SNS later
 - **Status:** **Accepted** (product owner, 2026-11-21). **Supersedes** the Rev 0.3 draft of this ADR (work items polled by the worker, no SQS), P8 (poller-only dispatch) and refinement F1. DynamoDB Streams stay out of MVP-1 (F3 kept); no FIFO queues (F2 kept).
@@ -142,7 +142,7 @@ ADR statuses: **Accepted** · **Proposed** · **Superseded**.
 | M1 | Ordering scope | **Resolved:** out of MVP-1 (ADR-12) |
 | M2 | Payments model | Deferred with ordering |
 | M3 | AI use cases | **Proposed:** menu import first, phase 2 (ADR-15) |
-| M4 | Target markets / regions | **Proposed (draft 2026-11-21):** US pilot, UAE commercial launch; region `me-central-1` proposed (region decision before week 9) |
+| M4 | Target markets / regions | **Proposed (draft 2026-11-21):** US pilot, UAE commercial launch; region `me-central-1` proposed (region decision before the pilot environment) |
 | M5 | Business model | **Decided (2026-11-21):** billing deferred beyond MVP-1; `plan_key` + static plan limits (U7) |
 | M6 | Tenant hierarchy | **Decided (2026-11-21):** outlets = locations under the tenant; no hierarchy above the tenant in MVP-1 (U4) |
 | M7 | Definition of "shops" | **Resolved:** food shops; retail inventory out (ADR-14). Specifics open (U10) |
@@ -186,7 +186,7 @@ W1: week-1 foundation work may start while C1 and C5 remain open. W2: week-1 sco
 | State bucket | Terraform state | `us-east-1`; encryption, versioning, public access blocked |
 | Libraries (L6) | Image processing, QR codes | **SkiaSharp** (MIT) and **QRCoder** (MIT) |
 
-Still open: C1 for the remaining P-items (by the week in doc 13 §1c), C4, ADR-17 (Proposed; region decision before week 9), and every other Proposed ADR.
+Still open: C1 for the remaining P-items (by the week in doc 13 §1c), C4, ADR-17 (Proposed; region decision before the pilot environment), and every other Proposed ADR.
 
 ### C.1 Provisionally agreed in Rev 0.3 (not yet confirmed)
 

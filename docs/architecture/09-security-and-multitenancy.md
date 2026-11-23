@@ -163,7 +163,7 @@ Rev 0.3 constraints: uploaded sources at `t/{tenantId}/ai-inputs/…` with a 30-
 - Public menu: no cookies, no personal data. Scan analytics come from CDN logs with **IP truncated** before storage.
 - Tenant users: email, name. Guests (if ordering): name/phone optional, minimized, retention-limited.
 - Data subject requests: export and delete per user; tenant-level export (menus as JSON/CSV).
-- Markets (draft, ADR-17/19): **US pilot, then UAE commercial launch.** Data stored in **`me-central-1`** if confirmed by the region decision before week 9 (ADR-17, Proposed; week-1 feasibility check only); US pilot users are told their data is stored in the UAE. Two legal tracks: **US pilot** (pilot terms, privacy notice, state-law applicability) and **UAE launch** (Federal Decree-Law 45/2021 PDPL and its executive regulations; DIFC/ADGM rules if the company is set up there; cross-border transfers to sub-processors; Arabic notices). A sub-processor register records where each one processes data.
+- Markets (draft, ADR-17/19): **US pilot, then UAE commercial launch.** Data stored in **`me-central-1`** if confirmed by the region decision before the pilot environment (ADR-17, Proposed; week-1 feasibility check only); US pilot users are told their data is stored in the UAE. Two legal tracks: **US pilot** (pilot terms, privacy notice, state-law applicability) and **UAE launch** (Federal Decree-Law 45/2021 PDPL and its executive regulations; DIFC/ADGM rules if the company is set up there; cross-border transfers to sub-processors; Arabic notices). A sub-processor register records where each one processes data.
 
 ## 9. Threat model summary (STRIDE, top items)
 | Threat | Example | Mitigation |

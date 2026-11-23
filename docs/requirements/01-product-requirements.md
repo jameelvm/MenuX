@@ -104,7 +104,7 @@ Listed so they can be prioritized, not because they are requirements:
 | Decision (Rev 0.2) | **.NET 10 LTS** (ADR-01). PostgreSQL and Angular versions are verified when preparing the implementation environment (doc 10 §3). |
 | Decision (Rev 0.2) | Hybrid DynamoDB + PostgreSQL accepted (ADR-03). |
 | Constraint (Rev 0.2) | Primarily a **single-developer learning project**; local-first development, then one AWS account (ADR-16). |
-| Proposed (Rev 0.3 draft) | Markets: **US pilot → UAE commercial launch** (C4, draft 2026-11-21). Hosting: `me-central-1` (ADR-17, Proposed; week-1 feasibility check only, region decision before week 9). Development capacity ~20 h/week (U12). |
+| Proposed (Rev 0.3 draft) | Markets: **US pilot → UAE commercial launch** (C4, draft 2026-11-21). Hosting: `me-central-1` (ADR-17, Proposed; week-1 feasibility check only, region decision before the pilot environment). Development capacity ~20 h/week (U12). |
 | Unknown | Budget, launch date, expected scale. |
 | Unknown | Compliance targets (GDPR, PCI DSS, SOC 2). |
 
@@ -121,7 +121,7 @@ Listed so they can be prioritized, not because they are requirements:
 ## 10. Release plan (Rev 0.3 draft, pending approval)
 
 - **MVP-1 local (weeks 1–8):** tenants with multiple locations, food catalogue, menus, media, publishing, QR codes, static public menu, tenant export/deletion; all protected tests green.
-- **MVP-1 in AWS (weeks 9–12):** one AWS environment in the region decided before week 9 (proposed: `me-central-1`, ADR-17), Cognito, CI/CD, observability, restore drills, production-readiness review.
+- **MVP-1 in AWS (weeks 9–12):** temporary test deployments in `us-east-1` (deploy, test, tear down; doc 10 §12.6), with Cognito, CI/CD, observability, restore drills, production-readiness review.
 - **Market sequence (C4, draft):** US pilot with US restaurants **after week 12**, once the pilot gates are met (doc 10 §12.5) → UAE commercial launch once UAE readiness is done (UAE market pack verified, full multi-language editing UI, UAE legal track, production environment). **Pilot success criteria: proposed in §11 (not approved).**
 - **Phase 2 (unscheduled):** AI menu import + Claude API integration (first candidate), multi-account production, real-time sold-out, billing, analytics, branding.
 - **Future:** ordering (pay at venue first), online payments.

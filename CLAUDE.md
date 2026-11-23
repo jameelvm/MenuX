@@ -6,7 +6,7 @@
 3. At the end of a meaningful change set, update `progress.md` (session history, decisions, next steps).
 
 ## Project
-Multi-tenant SaaS: food businesses create digital menus; guests open them via QR codes. Markets (draft): **US pilot/validation, then UAE commercial launch**; market packs, nothing market-specific hard-coded; Arabic/right-to-left from day one; region `me-central-1` proposed (week-1 feasibility check only; region decision before week 9).
+Multi-tenant SaaS: food businesses create digital menus; guests open them via QR codes. Markets (draft): **US pilot/validation, then UAE commercial launch**; market packs, nothing market-specific hard-coded; Arabic/right-to-left from day one; region `me-central-1` proposed (week-1 feasibility check only; region decision before the pilot environment).
 Stack: Angular · ASP.NET Core on **.NET 10 LTS** · DynamoDB (Catalog, Media, Menu Authoring, Publishing) · PostgreSQL (tenancy, identity, audit, deletion tracking) · S3 + CloudFront · Terraform on AWS. Claude API comes in phase 2 (AI menu import).
 Single-developer learning project, **~20 h/week, local-first** (Docker: PostgreSQL, DynamoDB Local, LocalStack S3, Keycloak, Mailpit).
 

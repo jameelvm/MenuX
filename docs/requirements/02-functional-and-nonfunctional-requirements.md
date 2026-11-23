@@ -167,7 +167,7 @@ See [09-security-and-multitenancy.md](../architecture/09-security-and-multitenan
 | ID | Requirement | Tag |
 |----|-------------|-----|
 | NFR-PRIV-01 | Personal data inventory; collect as little as possible (public menu collects no personal data). | [D] |
-| NFR-PRIV-02 | Data residency: single environment in `me-central-1` (UAE) if confirmed by the region decision before week 9 (ADR-17, Proposed; week-1 feasibility check only). US pilot users are told their data is stored in the UAE. Legal tracks: US pilot and UAE launch (UAE PDPL). | [S] C4 (draft) |
+| NFR-PRIV-02 | Data residency: single environment in `me-central-1` (UAE) if confirmed by the region decision before the pilot environment (ADR-17, Proposed; week-1 feasibility check only). US pilot users are told their data is stored in the UAE. Legal tracks: US pilot and UAE launch (UAE PDPL). | [S] C4 (draft) |
 | NFR-PRIV-03 | Tenant data export and deletion. | [D] |
 | NFR-PRIV-04 | PCI DSS scope kept to SAQ A (hosted payment pages) if payments are in scope. | [R] |
 | NFR-PRIV-05 | Sub-processor disclosure (AWS, Anthropic, PSP, email provider). | [D] |

@@ -1,6 +1,6 @@
 # Versions record (week 1)
 
-Checked **2026-11-21** for doc 10 §3 and doc 14 §6. This file records facts and the versions pinned in the repository. It approves nothing: C1 (other P-items) and C4 remain open, and ADR-17 remains **Proposed** (region decision due before week 9). C5 was approved on 2026-11-21 separately (doc 13 §1d).
+Checked **2026-11-21** for doc 10 §3 and doc 14 §6. This file records facts and the versions pinned in the repository. It approves nothing: C1 (other P-items) and C4 remain open, and ADR-17 remains **Proposed** (region decision due before the pilot environment). C5 was approved on 2026-11-21 separately (doc 13 §1d).
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation.
 
@@ -63,7 +63,7 @@ Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation.
 
 ## 3. `me-central-1` feasibility check (public AWS sources only)
 
-Scope: feasibility only, as input to the ADR-17 region decision before week 9. No AWS account was used, the region wasn't enabled, and no account changes were made.
+Scope: feasibility only, as input to the ADR-17 region decision before the pilot environment. No AWS account was used, the region wasn't enabled, and no account changes were made.
 
 ### 3.1 Service availability (public regional services table, snapshot dated 2025-11-13)
 
@@ -106,11 +106,11 @@ Scope: feasibility only, as input to the ADR-17 region decision before week 9. N
 **Related:** the same feed shows **ME-SOUTH-1 (Bahrain)** as unavailable. AWS's 2026-09-15 update says it can't restore data held only in that region. So no other AWS Middle East region is a near-term substitute.
 
 **Assessment [D]:**
-1. **As of today, `me-central-1` is not usable for the plan.** AWS's own still-standing guidance says the region cannot reliably support customer applications and advises customers to migrate out. ADR-17 proposes the first AWS environment there from week 9, which would hold the US pilot and then the UAE launch.
-2. **Whether it is still blocked at the decision point (before week 9) is unknown.** AWS has given no date. The region decision has to be made on the AWS status at that time, so re-check before deciding.
+1. **As of today, `me-central-1` is not usable for the plan.** AWS's own still-standing guidance says the region cannot reliably support customer applications and advises customers to migrate out. ADR-17 proposes the pilot environment there, which would hold the US pilot and then the UAE launch (weeks 9–12 now use temporary `us-east-1` test deployments).
+2. **Whether it is still blocked at the decision point (before the pilot environment) is unknown.** AWS has given no date. The region decision has to be made on the AWS status at that time, so re-check before deciding.
 3. **Relevance to the pilot risks in doc 04 §5.3:** AWS permanently lost data held only in one zone (mec1-az2). That is direct evidence for the single-AZ RDS risk (E3) and the "no multi-region disaster recovery" residual risk, whatever region is chosen. Backups stored in another region would have been the recovery path.
 
-**Documented fallback** (ADR-17 in doc 11; doc 04 §5.1 region row; doc 10 §12 week 9 row):
+**Documented fallback** (ADR-17 in doc 11; doc 04 §5.1 region row):
 - **Option A:** `us-east-1` for the US pilot, with a UAE deployment later.
 - **Already required whichever region is chosen:**
   - Terraform takes the region as a parameter, with nothing hard-coded.
@@ -122,11 +122,11 @@ Scope: feasibility only, as input to the ADR-17 region decision before week 9. N
   - The "data stored in the UAE" disclosure in the pilot terms (G12) would change.
   - A later UAE deployment, and possibly a tenant migration, would be needed for the UAE launch.
 
-**Nothing in this record changes ADR-17.** It stays **Proposed**, and the region decision stays due before week 9.
+**Nothing in this record changes ADR-17.** It stays **Proposed**, and the region decision stays due before the pilot environment.
 
 ## 4. Open points for the product owner
 
-1. **ADR-17 region** (§3.2): AWS says `me-central-1` cannot currently support customer applications reliably and has given no restoration date. The documented fallback is Option A (`us-east-1` for the pilot). The decision is due before week 9; re-check AWS status then. Week 1 work is unaffected, because nothing is deployed and the local stack uses no AWS region.
+1. **ADR-17 region** (§3.2): AWS says `me-central-1` cannot currently support customer applications reliably and has given no restoration date. The documented fallback is Option A (`us-east-1` for the pilot). The decision is due before the pilot environment (doc 10 §12.5 phase A); re-check AWS status then. Week 1 work is unaffected, because nothing is deployed and the local stack uses no AWS region.
 2. **Local S3 emulator** (§1): staying on LocalStack 4.14.0 means a frozen image with no further fixes. 4.14.0 is the last SemVer release; later releases use calendar versions and need a token. The Community GitHub repository was archived on 2026-03-23, and LocalStack says Community gets no further updates or security patches. The alternatives are a free LocalStack Hobby account and token (an account, and the token becomes a CI secret) or another emulator. [R] Keep 4.14.0 for MVP-1 local development and tests, because conditional writes and versioning (the features the publish flow needs) were verified. Temporary; see §1.1 for its limitations and the reassessment triggers. No image switch and no token without the product owner's approval.
 3. **Node.js**: done, 24.22.3 installed locally and pinned in `src/frontend/.nvmrc`.
 4. **.NET SDK**: update locally to 10.0.404 (optional security patch), then raise `global.json`.
