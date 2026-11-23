@@ -5,6 +5,10 @@
     <RootNamespace>MenuX.Host.Api</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="MenuX.IntegrationTests" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Modules\Tenancy\MenuX.Tenancy\MenuX.Tenancy.csproj" />
     <ProjectReference Include="..\Modules\Identity\MenuX.Identity\MenuX.Identity.csproj" />
     <ProjectReference Include="..\Modules\Catalog\MenuX.Catalog\MenuX.Catalog.csproj" />

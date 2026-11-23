@@ -1,7 +1,7 @@
 # MenuX — local development stack (week 1, plain Docker Compose per W3).
 # Local only: ports bind to 127.0.0.1; no real tenant data; placeholder credentials from .env.
 # Image versions are pinned; see docs/architecture/versions.md for how they were chosen.
-# Keycloak is added in week 2, once ADR-06 is decided.
+# Keycloak: local OIDC provider for the admin BFF (ADR-06, week 2); Cognito replaces it in AWS.
 name: menux
 
 services:
@@ -48,6 +48,24 @@ services:
       test: ['CMD-SHELL', 'curl -fs http://localhost:4566/_localstack/health | grep -Eq "\"s3\": \"(running|available)\""']
       interval: 5s
       timeout: 3s
+      retries: 30
+
+  keycloak:
+    # Local identity provider only; never deployed. Realm with synthetic test users: infrastructure/local/keycloak.
+    image: keycloak/keycloak:26.8.2
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:?copy .env.example to .env}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?copy .env.example to .env}
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "127.0.0.1:${KEYCLOAK_PORT:-8080}:8080"
+    volumes:
+      - ./infrastructure/local/keycloak/menux-realm.json:/opt/keycloak/data/import/menux-realm.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '\"status\": \"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
       retries: 30
 
   mailpit:

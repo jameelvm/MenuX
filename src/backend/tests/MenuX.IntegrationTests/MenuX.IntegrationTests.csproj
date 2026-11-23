@@ -11,10 +11,17 @@
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.Keycloak" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Host.Api\MenuX.Host.Api.csproj" />
     <ProjectReference Include="..\..\src\Host.Migrator\MenuX.Host.Migrator.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\MenuX.Infrastructure\MenuX.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Tenancy\MenuX.Tenancy\MenuX.Tenancy.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Single source: the same realm as local Docker. -->
+    <None Include="..\..\..\..\infrastructure\local\keycloak\menux-realm.json" Link="Keycloak\menux-realm.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

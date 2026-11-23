@@ -57,7 +57,7 @@ Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation.
 | EF Core | **10.0.15** | NuGet | EF Core **11.0.0** is out but targets **net11.0** only, so it can't be used on .NET 10 LTS. Stay on 10.0.x. |
 | Npgsql EF Core provider | **10.0.4** (net10.0) | NuGet | Matches EF Core 10 |
 | AWS SDK for .NET | v4: AWSSDK.DynamoDBv2 **4.1.0.3**, AWSSDK.S3 **4.1.2**, AWSSDK.SecurityToken **4.1.1.1** | NuGet | Current major is v4 |
-| Keycloak | **26.8.2** | Docker Hub `keycloak/keycloak` | Recorded only; Keycloak is added in week 2 after ADR-06 |
+| Keycloak | **26.8.2** | Docker Hub `keycloak/keycloak` | **Pinned in `compose.yaml` and the BFF tests (week 2, ADR-06 accepted)**; local only, never deployed |
 | Terraform + AWS provider | Terraform **1.17.2** (installed locally 2026-11-21; HashiCorp binary, GPG signature and SHA-256 verified); `hashicorp/aws` **6.73.0** (latest, 2026-11-11) | releases.hashicorp.com; registry.terraform.io | Nothing pinned in the repository or CI yet. Pin `required_version = "~> 1.17.0"` and provider `~> 6.73` with a committed `.terraform.lock.hcl` when the configuration is prepared; S3 native state locking (`use_lockfile`). Checked offline only (`fmt`, `validate`); **no AWS calls until the final AWS phase** |
 | Anthropic SDK for C# | — | — | Phase 2 |
 

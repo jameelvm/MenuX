@@ -51,6 +51,14 @@ Alternative considered: putting `tenant_id` as a custom claim in the token (Cogn
 
 Token handling for the SPA [R]: short-lived access tokens (≤ 15 min), refresh token rotation. Prefer a **Backend-for-Frontend (BFF)** cookie session (HttpOnly, Secure, SameSite=Strict) over storing tokens in browser storage. This removes token theft through XSS. The trade-off is a small amount of BFF code in the ASP.NET host. **Proposed (Rev 0.3 draft, pending approval): BFF.** The cookie is scoped to the admin hostname; the public hostname sets no cookies (X-5).
 
+[D] **BFF implementation notes (week 2, 2026-11-22):**
+- Endpoints: `GET /bff/login?returnUrl=` (local paths only; no open redirect), `GET /bff/session` (200 with the session and a fresh anti-forgery token, or **401**, never a redirect), `POST /bff/logout` (anti-forgery token required; ends the local and the identity-provider session).
+- The OIDC code flow runs server-side with PKCE; ASP.NET Core automatically uses **Pushed Authorization Requests (PAR)** when the provider supports them (Keycloak does), so the authorize parameters never appear in the browser URL.
+- The session cookie `__Host-menux-session` (HttpOnly, Secure, SameSite=Strict, 8 h sliding) holds only `iss` and `sub`; no tokens are saved. The default `iss` claim deletion of the OIDC handler is disabled so `idp_issuer` is available.
+- Anti-forgery: `__Host-menux-antiforgery` cookie plus a readable `__Host-XSRF-TOKEN` cookie whose value the SPA sends in `X-XSRF-TOKEN`.
+- Local Keycloak realm `menux` (`infrastructure/local/keycloak/menux-realm.json`): client `menux-admin-bff`, synthetic users `owner.a`, `admin.a`, `editor.a`, `staff.a`, `owner.b`, `editor.b`, `multi` @example.test (password `local-dev-only`); tenant memberships live in the MenuX database, not in Keycloak.
+- Tested end to end against a Keycloak container (`BffLoginTests`).
+
 ## 4. Authorization and data isolation (defense in depth)
 
 | Layer | Control |

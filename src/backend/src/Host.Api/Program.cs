@@ -1,4 +1,5 @@
 using MenuX.Tenancy;
+using MenuX.Host.Api.Bff;
 using MenuX.Identity;
 using MenuX.Catalog;
 using MenuX.Menus;
@@ -19,10 +20,17 @@ builder.Services
     .AddNotificationsModule()
     .AddAuditModule();
 
+// Admin BFF: server-side OIDC (Keycloak locally, Cognito in AWS) + HttpOnly session cookie (ADR-06).
+builder.Services.AddMenuXBff(builder.Configuration);
+
 var app = builder.Build();
 
-// Liveness only. No business endpoints in week 1.
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Liveness only.
+app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+app.MapBff();
 
 app.Run();
 

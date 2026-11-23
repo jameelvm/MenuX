@@ -1,0 +1,152 @@
+{
+  "realm": "menux",
+  "enabled": true,
+  "displayName": "MenuX (local development)",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "clients": [
+    {
+      "clientId": "menux-admin-bff",
+      "name": "MenuX admin BFF (local)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "local-bff-secret-change-me",
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://localhost:54053/signin-oidc",
+        "http://localhost:54054/signin-oidc",
+        "https://localhost/signin-oidc"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://localhost:54053/signout-callback-oidc##http://localhost:54054/signout-callback-oidc##https://localhost/signout-callback-oidc"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "owner.a@example.test",
+      "email": "owner.a@example.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Olivia",
+      "lastName": "Owner",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "local-dev-only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "admin.a@example.test",
+      "email": "admin.a@example.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Adam",
+      "lastName": "Admin",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "local-dev-only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "editor.a@example.test",
+      "email": "editor.a@example.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Erin",
+      "lastName": "Editor",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "local-dev-only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "staff.a@example.test",
+      "email": "staff.a@example.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Sam",
+      "lastName": "Staff",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "local-dev-only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "owner.b@example.test",
+      "email": "owner.b@example.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Omar",
+      "lastName": "Owner",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "local-dev-only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "editor.b@example.test",
+      "email": "editor.b@example.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Eva",
+      "lastName": "Editor",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "local-dev-only",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "multi@example.test",
+      "email": "multi@example.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Morgan",
+      "lastName": "Multi",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "local-dev-only",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
