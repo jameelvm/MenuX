@@ -51,6 +51,14 @@ Alternative considered: putting `tenant_id` as a custom claim in the token (Cogn
 
 Token handling for the SPA [R]: short-lived access tokens (≤ 15 min), refresh token rotation. Prefer a **Backend-for-Frontend (BFF)** cookie session (HttpOnly, Secure, SameSite=Strict) over storing tokens in browser storage. This removes token theft through XSS. The trade-off is a small amount of BFF code in the ASP.NET host. **Proposed (Rev 0.3 draft, pending approval): BFF.** The cookie is scoped to the admin hostname; the public hostname sets no cookies (X-5).
 
+[D] **Tenant resolution and API pipeline (week 2 slice 3, 2026-11-23):**
+- First login: email, `email_verified` and name are read from the ID token once (`email profile` scopes) to create the MenuX user; unverified emails create no user and the login returns `/?loginError=email_not_verified`. The identity provider also enforces verification (local realm: `verifyEmail`).
+- Every `/api` request: user from `iss` + `sub` (`identity.find_user_id`), selected tenant from `X-Tenant-Id`, verified active membership with permissions and location scope (cached 60 s); unknown or foreign tenants → **404**. Without `X-Tenant-Id`, only the user's own data and a read-only list of their member tenants (`app.member_tenant_ids`).
+- Writes: anti-forgery token → tenant-status gate (`suspended`, `pending_deletion`, `deleting` are read-only) → billing access policy (`ITenantAccessPolicy`, allow-all until billing rules exist).
+- One PostgreSQL transaction per request shared by all module contexts (`PostgresUnitOfWork`), committed only when the endpoint succeeds; tenant creation uses its own unit of work for the new tenant.
+- Permissions checked per endpoint (`RequirePermission`), never role names; new permission `tenant.manage` (Owner, Admin). Owner role changes need the owner-only `tenant.delete` permission; a tenant always keeps one active owner.
+- `ITenantContextSetter` is only used by the middleware and tenant onboarding (architecture test). Cross-tenant harness covers every `/api` endpoint automatically.
+
 [D] **BFF implementation notes (week 2, 2026-11-22):**
 - Endpoints: `GET /bff/login?returnUrl=` (local paths only; no open redirect), `GET /bff/session` (200 with the session and a fresh anti-forgery token, or **401**, never a redirect), `POST /bff/logout` (anti-forgery token required; ends the local and the identity-provider session).
 - The OIDC code flow runs server-side with PKCE; ASP.NET Core automatically uses **Pushed Authorization Requests (PAR)** when the provider supports them (Keycloak does), so the authorize parameters never appear in the browser URL.

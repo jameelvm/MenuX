@@ -25,7 +25,8 @@ public sealed class TenancyDbContext(DbContextOptions<TenancyDbContext> options,
         {
             e.ToTable("tenants");
             e.HasKey(t => t.Id);
-            e.HasQueryFilter(t => t.Id == tenantContext.TenantId);
+            // Selected tenant, or (tenant picker) the user's member tenants; RLS enforces the same in PostgreSQL.
+            e.HasQueryFilter(t => t.Id == tenantContext.TenantId || tenantContext.MemberTenantIds.Contains(t.Id));
         });
 
         modelBuilder.Entity<Location>(e =>

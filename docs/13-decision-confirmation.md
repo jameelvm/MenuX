@@ -74,6 +74,10 @@ ADR-17 and ADR-19 remain **Proposed** until the final approval step.
 | Budget | AWS budget alert | **Confirmed** | USD 25/month alert, not a cap; recipient = product owner's email, kept out of the repository |
 | State bucket | Terraform state | **Confirmed** | `us-east-1`; encryption, versioning, public access blocked |
 | L6 | Libraries | **Confirmed** | SkiaSharp (images), QRCoder (QR codes) |
+| Signup | Tenant creation (doc 03 J1 open item) | **Confirmed 2026-11-23** | **Self-service:** anyone can create an account; after verifying their email they can create a tenant and become its Owner |
+| Email verification | Where it is enforced | **Confirmed 2026-11-23** | **Both** the identity provider (login completes only for verified emails; Keycloak `verifyEmail`, Cognito confirmation) **and** the API (no MenuX user without `email_verified`; tenant creation re-checks; DB constraint) |
+| First-login profile | Source of profile data | **Confirmed 2026-11-23** | Email, email-verified and name read from the ID token **once**, at first login, to create the MenuX user; afterwards the MenuX database is the source of truth for profile, memberships and permissions; the session keeps only `iss` + `sub` (ADR-06 unchanged) |
+| Billing readiness | Subscription or trial required for restaurant use | **Confirmed 2026-11-23, rules pending** | Architecture ready (commercial-state fields next to `plan_key`, one access-policy seam); **no trial duration, pricing or access rules assumed** — finalised in the billing phase. U7 unchanged (billing deferred) |
 | AWS timing | When AWS work happens | **Confirmed 2026-11-22** | No AWS deployment until the final AWS phase (weeks 9–12): no state bucket, budget, OIDC provider, deployer role or test environment before then; no SSO profile or account ID needed yet; Terraform prepared locally (`fmt`/`validate` only); AWS-only checks pending (doc 10 §12.7) |
 
 C1 is therefore decided for **P3, P11, P13, P16** (approved) and **P8** (superseded). The other P-items stay open until their week in §1c.

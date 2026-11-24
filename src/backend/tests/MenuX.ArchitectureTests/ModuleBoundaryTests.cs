@@ -72,6 +72,23 @@ public sealed class ModuleBoundaryTests
             .Check(Architecture);
     }
 
+    [Fact]
+    public void Only_tenant_resolution_and_onboarding_set_the_tenant_context()
+    {
+        // doc 09 §2: the tenant comes from a verified membership; handlers can't set it.
+        const string setter = "MenuX.Infrastructure.Tenancy.ITenantContextSetter";
+        var allowed = new System.Text.RegularExpressions.Regex(
+            @"^(MenuX\.Infrastructure\..*|MenuX\.Host\.Api\.Tenancy\.TenantResolutionMiddleware.*|MenuX\.Tenancy\.Endpoints\.TenancyEndpoints.*)$");
+
+        var users = Architecture.Types
+            .Where(t => t.Dependencies.Any(d => d.Target.FullName == setter))
+            .Select(t => t.FullName)
+            .ToList();
+
+        Assert.NotEmpty(users); // the rule must actually see the middleware
+        Assert.All(users, name => Assert.Matches(allowed, name));
+    }
+
     [Theory]
     [MemberData(nameof(Modules.All), MemberType = typeof(Modules))]
     public void Every_module_is_loaded_with_its_contracts(string module)

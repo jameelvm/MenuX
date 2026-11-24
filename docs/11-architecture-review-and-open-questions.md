@@ -86,7 +86,7 @@ ADR statuses: **Accepted** · **Proposed** · **Superseded**.
 - **Decision:** 128 random bits (base64url, 22 characters) from a cryptographically secure generator. WAF per-IP rate rules on public paths. Edge rejection of malformed codes. 403/404 negative caching. **QR-miss alarms in MVP-1, automatic IP blocking in phase 2.** The CloudFront-scope WAF web ACL lives in `us-east-1`. ASP.NET rate limiter on the admin API.
 
 ### ADR-12: Ordering and online payments out of MVP-1
-- **Status:** Accepted (Rev 0.2 #7). **SaaS billing deferred beyond MVP-1** (U7, product owner, 2026-11-21): no Stripe subscriptions in MVP-1; `tenants.plan_key` + static plan limits. The design keeps `plan_key` linkable to the deferred `billing` schema (`plans.key`, `subscriptions`) when billing is introduced (doc 08 §4.3).
+- **Status:** Accepted (Rev 0.2 #7). **SaaS billing deferred beyond MVP-1** (U7, product owner, 2026-11-21): no Stripe subscriptions in MVP-1; `tenants.plan_key` + static plan limits. **Billing readiness (2026-11-23):** restaurant use will require an active subscription or an eligible free trial; `tenancy.tenants` keeps a commercial-state mirror (`subscription_status`, `trial_ends_at`) and one access-policy seam (`ITenantAccessPolicy`, currently allow-all). Trial, pricing and access rules are **not** defined yet. The design keeps `plan_key` linkable to the deferred `billing` schema (`plans.key`, `subscriptions`) when billing is introduced (doc 08 §4.3).
 
 ### ADR-13: Multiple locations per tenant
 - **Status:** Accepted (Rev 0.2 #8). **U4 approved** (product owner, 2026-11-21): each hotel outlet is a location under its tenant; no hierarchy above the tenant in MVP-1.
@@ -186,6 +186,10 @@ W1: week-1 foundation work may start while C1 and C5 remain open. W2: week-1 sco
 | State bucket | Terraform state | `us-east-1`; encryption, versioning, public access blocked |
 | Libraries (L6) | Image processing, QR codes | **SkiaSharp** (MIT) and **QRCoder** (MIT) |
 | AWS timing (2026-11-22) | When AWS resources are created | **Only in the final AWS phase (weeks 9–12).** Until then Terraform is prepared and validated locally; no AWS resources, SSO profile, account ID or credentials; AWS-only checks pending (doc 10 §12.7) |
+| Signup (2026-11-23) | Tenant creation | **Self-service**; email verified first; creator becomes Owner |
+| Email verification (2026-11-23) | Enforcement | Identity provider **and** API (plus a database constraint) |
+| First-login profile (2026-11-23) | Profile source | ID token read once at first login; then the MenuX database; session `iss` + `sub` only |
+| Billing readiness (2026-11-23) | Subscription/trial for restaurant use | Extensible seam only (commercial state + access policy); trial, pricing and access rules **pending** the billing phase; U7 unchanged |
 
 Still open: C1 for the remaining P-items (by the week in doc 13 §1c), C4, ADR-17 (Proposed; region decision before the pilot environment), and every other Proposed ADR.
 

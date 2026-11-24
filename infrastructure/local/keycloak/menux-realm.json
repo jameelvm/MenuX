@@ -3,7 +3,7 @@
   "enabled": true,
   "displayName": "MenuX (local development)",
   "sslRequired": "none",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "accessTokenLifespan": 300,
@@ -147,6 +147,34 @@
           "temporary": false
         }
       ]
+    },
+    {
+      "username": "unverified@example.test",
+      "email": "unverified@example.test",
+      "emailVerified": false,
+      "enabled": true,
+      "firstName": "Una",
+      "lastName": "Unverified",
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "local-dev-only",
+          "temporary": false
+        }
+      ]
     }
-  ]
+  ],
+  "registrationEmailAsUsername": true,
+  "verifyEmail": true,
+  "resetPasswordAllowed": true,
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "no-reply@menux.local",
+    "fromDisplayName": "MenuX (local)",
+    "ssl": "false",
+    "starttls": "false",
+    "auth": "false"
+  }
 }

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using MenuX.Identity.Contracts;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
@@ -84,23 +85,57 @@ public static class BffAuthentication
                 options.MapInboundClaims = false;
                 options.Scope.Clear();
                 options.Scope.Add("openid");
+                // email + profile: read ONCE at first login to create the MenuX user (product owner, 2026-11-23).
+                options.Scope.Add("email");
+                options.Scope.Add("profile");
                 // The handler deletes "iss" after validation by default; provider-neutral identity needs it
                 // (users.idp_issuer + idp_subject, X-2), so keep it.
                 options.ClaimActions.Remove(IssuerClaim);
                 options.CallbackPath = "/signin-oidc";
                 options.SignedOutCallbackPath = "/signout-callback-oidc";
-                options.Events.OnTokenValidated = context =>
+                options.Events.OnTokenValidated = async context =>
                 {
-                    // Keep only iss + sub (ADR-06): the session carries no profile data or tokens.
                     var principal = context.Principal ?? throw new InvalidOperationException("No principal after token validation.");
                     var issuer = principal.FindFirstValue(IssuerClaim) ?? throw new InvalidOperationException("Token has no iss claim.");
                     var subject = principal.FindFirstValue(SubjectClaim) ?? throw new InvalidOperationException("Token has no sub claim.");
+
+                    // First login creates the MenuX user from the verified profile; afterwards the database is the
+                    // source of truth. API-side email verification: unverified -> no user, no session.
+                    var name = principal.FindFirstValue("name")
+                        ?? string.Join(' ', new[] { principal.FindFirstValue("given_name"), principal.FindFirstValue("family_name") }.Where(n => !string.IsNullOrWhiteSpace(n)));
+                    var profile = new FirstLoginProfile(
+                        issuer, subject, principal.FindFirstValue("email"),
+                        string.Equals(principal.FindFirstValue("email_verified"), "true", StringComparison.OrdinalIgnoreCase),
+                        name);
+                    var result = await context.HttpContext.RequestServices.GetRequiredService<IIdentityApi>()
+                        .EnsureUserAsync(profile, context.HttpContext.RequestAborted);
+                    if (result.Outcome is not (ProvisioningOutcome.Existing or ProvisioningOutcome.Created))
+                    {
+                        context.Fail(result.Outcome.ToString());
+                        return;
+                    }
+
+                    // Keep only iss + sub (ADR-06): the session carries no profile data or tokens.
                     var identity = new ClaimsIdentity(
                         [new Claim(IssuerClaim, issuer), new Claim(SubjectClaim, subject)],
                         authenticationType: CookieAuthenticationDefaults.AuthenticationScheme,
                         nameType: SubjectClaim,
                         roleType: null);
                     context.Principal = new ClaimsPrincipal(identity);
+                };
+
+                // Rejected logins (e.g. unverified email) return to the SPA with a reason, not an error page.
+                options.Events.OnRemoteFailure = context =>
+                {
+                    var reason = context.Failure?.Message switch
+                    {
+                        nameof(ProvisioningOutcome.EmailNotVerified) => "email_not_verified",
+                        nameof(ProvisioningOutcome.Disabled) => "account_disabled",
+                        nameof(ProvisioningOutcome.EmailInUse) => "email_in_use",
+                        _ => "login_failed",
+                    };
+                    context.Response.Redirect($"/?loginError={reason}");
+                    context.HandleResponse();
                     return Task.CompletedTask;
                 };
             });

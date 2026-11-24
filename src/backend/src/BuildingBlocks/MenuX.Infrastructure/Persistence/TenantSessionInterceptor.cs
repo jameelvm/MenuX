@@ -5,16 +5,12 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 namespace MenuX.Infrastructure.Persistence;
 
 /// <summary>
-/// Applies the tenant context to every PostgreSQL transaction (doc 09 §4.2):
-/// <c>set_config('app.tenant_id', …, is_local => true)</c>, which is <c>SET LOCAL</c>. The setting ends with
-/// the transaction, so a pooled connection never carries a previous tenant. Work outside a transaction
-/// sees no tenant, and Row-Level Security then returns no rows: the failure mode is safe.
+/// Applies the tenant context to every PostgreSQL transaction that EF Core starts itself (doc 09 §4.2),
+/// via <see cref="TenantSession"/> (SET LOCAL semantics). Request work normally uses the shared
+/// <see cref="PostgresUnitOfWork"/>, which applies the same settings when it begins its transaction.
 /// </summary>
 public sealed class TenantSessionInterceptor(ITenantContext tenantContext) : DbTransactionInterceptor
 {
-    internal const string Sql =
-        "SELECT set_config('app.tenant_id', @tenant_id, true), set_config('app.user_id', @user_id, true)";
-
     public override DbTransaction TransactionStarted(
         DbConnection connection, TransactionEndEventData eventData, DbTransaction result)
     {
@@ -39,19 +35,9 @@ public sealed class TenantSessionInterceptor(ITenantContext tenantContext) : DbT
         var command = connection.CreateCommand();
         command.Transaction = transaction;
 #pragma warning disable CA2100 // Constant SQL; values are parameters.
-        command.CommandText = Sql;
+        command.CommandText = TenantSession.SetConfigSql;
 #pragma warning restore CA2100
-        AddParameter(command, "tenant_id", tenantContext.TenantId);
-        AddParameter(command, "user_id", tenantContext.UserId);
+        TenantSession.AddParameters(command, TenantSession.From(tenantContext));
         return command;
-    }
-
-    private static void AddParameter(DbCommand command, string name, Guid? value)
-    {
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = name;
-        // Empty string = not set; the RLS policies treat it as NULL (nullif), so no rows match.
-        parameter.Value = value?.ToString() ?? string.Empty;
-        command.Parameters.Add(parameter);
     }
 }

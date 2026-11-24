@@ -36,7 +36,7 @@ public sealed class KeycloakFixture : IAsyncLifetime
 /// with PKCE, an HttpOnly/Secure/SameSite=Strict session cookie holding only iss + sub, no tokens in
 /// the browser, 401 (not redirects) for API calls, and anti-forgery on logout.
 /// </summary>
-public sealed partial class BffLoginTests(KeycloakFixture keycloak) : IDisposable
+public sealed partial class BffLoginTests(KeycloakFixture keycloak, PostgresFixture db) : IDisposable
 {
     private readonly WebApplicationFactory<OidcOptions> _factory = new WebApplicationFactory<OidcOptions>()
         .WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -45,6 +45,7 @@ public sealed partial class BffLoginTests(KeycloakFixture keycloak) : IDisposabl
             ["Oidc:ClientId"] = "menux-admin-bff",
             ["Oidc:ClientSecret"] = "local-bff-secret-change-me",
             ["Oidc:RequireHttpsMetadata"] = "false",
+            ["ConnectionStrings:App"] = db.App(),
         })));
 
     public void Dispose() => _factory.Dispose();
@@ -75,6 +76,23 @@ public sealed partial class BffLoginTests(KeycloakFixture keycloak) : IDisposabl
         Assert.NotNull(session);
         Assert.Equal(keycloak.Authority, session.Issuer.TrimEnd('/'));
         Assert.True(Guid.TryParse(session.Subject, out _), "Keycloak subjects are UUIDs");
+
+        // First login created the MenuX user from the verified ID-token profile; the API reads it from the database.
+        var me = await app.GetFromJsonAsync<MenuX.Identity.Endpoints.IdentityEndpoints.MeResponse>(new Uri("/api/me", UriKind.Relative), TestContext.Current.CancellationToken);
+        Assert.NotNull(me);
+        Assert.Equal("owner.a@example.test", me.Email);
+        Assert.Equal("Olivia Owner", me.DisplayName);
+    }
+
+    [Fact]
+    public async Task The_identity_provider_blocks_login_until_the_email_is_verified()
+    {
+        using var app = CreateAppClient();
+        var callbackReached = await TryLoginAsync(app, "unverified@example.test");
+        Assert.False(callbackReached, "Keycloak must not complete the login for an unverified email (verifyEmail is required).");
+
+        var session = await app.GetAsync(new Uri("/bff/session", UriKind.Relative), TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, session.StatusCode);
     }
 
     [Fact]
@@ -161,6 +179,26 @@ public sealed partial class BffLoginTests(KeycloakFixture keycloak) : IDisposabl
         using var callbackForm = new FormUrlEncodedContent(fields);
         var signIn = await app.PostAsync(new Uri(callback.PathAndQuery, UriKind.Relative), callbackForm, ct);
         return (signIn, string.Empty);
+    }
+
+    /// <summary>Submits credentials and reports whether Keycloak returned the callback form to the app.</summary>
+    private static async Task<bool> TryLoginAsync(HttpClient app, string username)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var challenge = await app.GetAsync(new Uri("/bff/login?returnUrl=%2F", UriKind.Relative), ct);
+        using var handler = new LocalhostCookieJar(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
+        using var browser = new HttpClient(handler);
+        var loginPage = await GetFollowingRedirectsAsync(browser, challenge.Headers.Location!, ct);
+        var action = WebUtility.HtmlDecode(LoginFormAction().Match(loginPage).Groups[1].Value);
+        using var credentials = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["username"] = username,
+            ["password"] = "local-dev-only",
+            ["credentialId"] = string.Empty,
+        });
+        var response = await browser.PostAsync(new Uri(action), credentials, ct);
+        var html = await response.Content.ReadAsStringAsync(ct);
+        return html.Contains("/signin-oidc", StringComparison.Ordinal);
     }
 
     /// <summary>Follows redirects that stay on the identity provider, like a browser would.</summary>

@@ -7,6 +7,7 @@ public sealed class Location
     public Guid Id { get; set; }
     public string Slug { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string? LocationType { get; set; }
     public string Timezone { get; set; } = "America/New_York";
     public string Currency { get; set; } = "USD";
     public string Status { get; set; } = "active";

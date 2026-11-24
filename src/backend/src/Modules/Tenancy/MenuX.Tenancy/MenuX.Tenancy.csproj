@@ -9,6 +9,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MenuX.Tenancy.Contracts\MenuX.Tenancy.Contracts.csproj" />
+    <ProjectReference Include="..\..\Identity\MenuX.Identity.Contracts\MenuX.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\..\Audit\MenuX.Audit.Contracts\MenuX.Audit.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\MenuX.SharedKernel\MenuX.SharedKernel.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\MenuX.Infrastructure\MenuX.Infrastructure.csproj" />
   </ItemGroup>

@@ -16,6 +16,11 @@ public sealed class Tenant
     public string PlanKey { get; set; } = "pilot";
     public string MarketPack { get; set; } = "us-pilot";
     public string HomeRegion { get; set; } = "us-east-1";
+
+    /// <summary>Commercial state mirror (U7; billing rules pending). 'none' until billing exists.</summary>
+    public string SubscriptionStatus { get; set; } = "none";
+    public DateTimeOffset? TrialEndsAt { get; set; }
+    public Guid? CreatedBy { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

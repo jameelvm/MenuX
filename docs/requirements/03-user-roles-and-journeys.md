@@ -71,7 +71,7 @@ Acceptance points:
 - A tenant is created **only after** email verification, which limits spam signups.
 - Country is captured at signup and selects the **market pack** (currency, languages and text direction, allergen scheme, price display; ADR-19, draft). Timezone and default language are captured too. [D]
 - The guided setup creates the first location. More locations can be added at any time (ADR-13). Each location has its own timezone and URL slug.
-- **Open:** self-serve signup or sales-led? Free trial? Card required at signup? [A]
+- **Decided (2026-11-23, product owner): self-service signup.** Anyone can create an account (identity-provider hosted registration); the email must be verified before a tenant can be created; the creator becomes the Owner. **Free trial and card at signup: pending the billing phase** (subscription or eligible trial will be required; no rules defined yet; U7).
 
 ### J2 — Build a menu (confirmed)
 **Actor:** Admin/Editor

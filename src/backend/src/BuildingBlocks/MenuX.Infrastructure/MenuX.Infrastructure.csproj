@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Shared technical plumbing: tenant context, PostgreSQL session/RLS interceptor, SQL migrations; later outbox, SQS messaging. DynamoItemWriter is added in week 3 (after ADR-09). No module references. -->
   <ItemGroup>
+    <!-- Endpoint filters for tenant and permission checks shared by all modules. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="EFCore.NamingConventions" />
   </ItemGroup>

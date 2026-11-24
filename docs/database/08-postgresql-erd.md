@@ -88,6 +88,9 @@ erDiagram
 | plan_key | text NOT NULL DEFAULT 'pilot' | static plan limits from configuration (U7, approved 2026-11-21). When billing is introduced, `plan_key` matches `billing.plans.key` and `billing.subscriptions` links tenant ↔ plan (§4.3) |
 | market_pack | text NOT NULL | e.g., `us-pilot`, `ae` (ADR-19, draft) |
 | home_region | text NOT NULL | AWS region holding the tenant's data (ADR-17, draft) |
+| subscription_status | text NOT NULL DEFAULT 'none' CHECK (none, trialing, active, past_due, canceled) | [D] 2026-11-23: commercial-state mirror for billing readiness; values follow `billing.subscriptions`; updated by the future billing module. **Rules pending** (U7) |
+| trial_ends_at | timestamptz NULL | [D] 2026-11-23: trial end, set by the future billing rules; no duration assumed |
+| created_by | uuid NULL | [D] the user who created the tenant (Identity ID; no cross-schema FK) |
 | suspended_reason | text NULL | |
 | deletion_requested_at | timestamptz NULL | grace period |
 | created_at / updated_at | timestamptz | |
@@ -138,7 +141,7 @@ These are platform tables. They're accessed by the purge worker's role (which by
 ### 4.2 `identity`
 | Table | Key columns | Notes |
 |-------|-------------|-------|
-| **users** | id, idp_issuer, idp_subject (UNIQUE together), email citext UNIQUE, display_name, status, last_login_at | Global user (one person can belong to several tenants). Provider-neutral (Keycloak locally, Cognito in AWS; X-2). No passwords stored. On tenant deletion the user and IdP identity are deleted only if no other memberships remain. |
+| **users** | id, idp_issuer, idp_subject (UNIQUE together), email citext UNIQUE, display_name, status, last_login_at, email_verified_at ([D] 2026-11-23; CHECK: active users must have a verified email) | Global user (one person can belong to several tenants). Provider-neutral (Keycloak locally, Cognito in AWS; X-2). No passwords stored. On tenant deletion the user and IdP identity are deleted only if no other memberships remain. |
 | **memberships** | id, tenant_id, user_id, status (invited/active/disabled); UNIQUE(tenant_id, user_id) | A user's link to a tenant |
 | **roles** | id, tenant_id NULL (NULL = system role), key, name | System roles: owner, admin, editor, staff |
 | **role_permissions** | role_id, permission_key | e.g., `menu.publish`, `order.refund` |

@@ -256,8 +256,8 @@ public sealed class RowLevelSecurityTests(PostgresFixture db)
         if (existingUser is null)
         {
             await InTenantAsync(null, userId, $"""
-                INSERT INTO identity.users (id, idp_issuer, idp_subject, email, display_name, status)
-                VALUES ('{userId}', 'https://idp.test', 'sub-{userId}', '{userId:N}@example.test', 'Test User', 'active')
+                INSERT INTO identity.users (id, idp_issuer, idp_subject, email, display_name, status, email_verified_at)
+                VALUES ('{userId}', 'https://idp.test', 'sub-{userId}', '{userId:N}@example.test', 'Test User', 'active', now())
                 """);
         }
 
