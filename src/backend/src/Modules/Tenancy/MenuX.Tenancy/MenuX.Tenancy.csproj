@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tenancy module internals. Folders: Application, Domain, Infrastructure, Endpoints (doc 05 §2, two-project layout). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- SQL-first migrations, applied by MenuX.Host.Migrator as the schema owner. -->
+    <EmbeddedResource Include="Infrastructure\Migrations\*.sql" LogicalName="MenuX.Tenancy.Migrations.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MenuX.Tenancy.Contracts\MenuX.Tenancy.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\MenuX.SharedKernel\MenuX.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\MenuX.Infrastructure\MenuX.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

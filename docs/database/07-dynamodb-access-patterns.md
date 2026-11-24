@@ -21,7 +21,7 @@ Revision 0.2: tenant enumeration and deletion fixed (§1 principle 9, §7 new); 
 10. **One writer (TI-2).** Every Put/Update/Delete, including transaction and batch members, goes through `DynamoItemWriter` in BuildingBlocks. SDK write calls elsewhere fail an architecture test. PartiQL is not used.
 11. **No accidental upserts (TI-1).** Every `UpdateItem` sets `TENANT_PK = if_not_exists(TENANT_PK, :tpk)` and `TENANT_SK = if_not_exists(TENANT_SK, :tsk)`. Updates of existing aggregates include `attribute_exists(PK)`. Intentional upserts (`MANIFEST`, `TENANTGUARD`, counters) are explicit writer options. `REMOVE` never names `PK`, `SK` or `TENANT_*`.
 12. **Key character rules (TI-7).** Table key segments use `[A-Za-z0-9_-]`; `#` and `|` are delimiters only. Slugs `^[a-z0-9]+(-[a-z0-9]+)*$`, ≤ 63 characters. No user text in table keys; table keys ≤ 1,024 bytes so `TENANT_SK` fits the GSI sort-key limit. GSI1 sort keys may contain names normalized per F6 (Unicode NFKC, case folding, Arabic rules: diacritics and tatweel removed, alef/ya/ta-marbuta variants unified) and truncated to 100 characters (code points, not bytes). The writer validates.
-13. **Transactional outbox and work items; no Streams or SQS in MVP-1 (ADR-18).** Events are `T#{t}#OUTBOX / EVT#{ulid}` items written in the same transaction as the change. Background work is items with a lease. Both are found through a sparse **`WorkIndex`** (GSI2: `GSI2PK = WORK#{type}[#{status}]`, `GSI2SK = {timestamp}`) on every module table, single shard (PUB-14), removed when the work is done.
+13. **Transactional outbox relayed to Amazon SQS; no Streams in MVP-1 (ADR-18, accepted 2026-11-21).** Events and job messages are `T#{t}#OUTBOX / EVT#{ulid}` items written in the same transaction as the change; the relay sends them to SQS. Job state items are claimed with a lease when their message arrives. Unsent outbox items (and reconciler lookups) use a sparse **`WorkIndex`** (GSI2: `GSI2PK = WORK#{type}[#{status}]`, `GSI2SK = {timestamp}`) on every module table, single shard (PUB-14), removed when the work is done.
 14. **Bulk pacing (TI-13).** Bulk writes are paced (≤ 200 items/s per tenant); alarm on GSI throttle events.
 
 ## 2. Access patterns (complete list for MVP)
@@ -147,10 +147,10 @@ Pattern mapping:
 - **P5** `Query(PK=T#t#M#m, SK begins_with VER#, ScanIndexForward=false)`
 - **P6** `Query(PK=T#t#L#l, SK begins_with PUB#)` → `BatchGetItem(ConsistentRead=true)` of each menu's `CURRENT` → manifest.
 - **P7** Uniqueness: `PutItem attribute_not_exists(PK)` on `QR#`/`ROUTE#`. Slug rename = transaction: put the new route, turn the old one into a redirect (grace period). Source of truth for slugs: PostgreSQL `tenancy.locations`.
-- **P8** Jobs. Request: `TransactWriteItems` [Put `ACTIVEJOB` (`attribute_not_exists`), Put `JOB#{ulid}`]. On lock conflict, `GetItem ACTIVEJOB`: same type and draftVersion → return its job; else 409. Claim: `UpdateItem` with condition `status = REQUESTED OR (status = BUILDING AND leaseUntil < :now)`. Poller: `Query(GSI2, GSI2PK = WORK#JOB#REQUESTED)` and `WORK#JOB#BUILDING` with `GSI2SK < :now − lease`.
+- **P8** Jobs. Request: `TransactWriteItems` [Put `ACTIVEJOB` (`attribute_not_exists`), Put `JOB#{ulid}`]. On lock conflict, `GetItem ACTIVEJOB`: same type and draftVersion → return its job; else 409. The request transaction also puts an `OUTBOX` item (`PublishJobRequested`). Claim (on receiving the SQS message): `UpdateItem` with condition `status = REQUESTED OR (status = BUILDING AND leaseUntil < :now)`; a failed condition means a duplicate or finished job, so the message is deleted. Reconciler: `Query(GSI2, GSI2PK = WORK#JOB#…)` for jobs older than a threshold → re-enqueue via the outbox.
 - **P9** Commit: `TransactWriteItems` [ConditionCheck `TENANTGUARD` (status = ACTIVE); Update `CURRENT` (`attribute_not_exists(PK) OR pointerRevision = :expected`); Put `VER#n`; Put/Delete `PUB#` (changed locations); Update job (status = BUILDING AND leaseOwner = :me); Delete `ACTIVEJOB` (jobId = :job); Put outbox event]. 7 fixed actions + changed locations ≤ 100 → **validation limit: 90 locations per menu**.
 - **P10** Manifest state. Mark: `UpdateItem ADD dirtyVersion :one SET dirty = :true, dirtySince = if_not_exists(dirtySince, :now), GSI2PK = :work, GSI2SK = :now` (an intentional upsert; tags set by the writer). Claim: condition `dirty = :true AND (attribute_not_exists(buildLeaseUntil) OR buildLeaseUntil < :now)`. Clear: `SET builtVersion = :v, dirty = :false REMOVE GSI2PK, GSI2SK, dirtySince` with condition `dirtyVersion = :v AND buildLeaseOwner = :me`; **on failure, re-mark** (`ADD dirtyVersion 1`).
-- **P11** Outbox and projections: `Query(GSI2, GSI2PK = WORK#OUTBOX)` and `WORK#PROJ`, oldest first; after processing, `REMOVE GSI2PK, GSI2SK` (+ `ttl` for outbox items).
+- **P11** Outbox relay: `Query(GSI2, GSI2PK = WORK#OUTBOX)`, oldest first → `SendMessageBatch` to the target SQS queue → `REMOVE GSI2PK, GSI2SK` (+ `ttl`). Projections are enqueued the same way.
 
 #### 3.3.1 QR code identifiers (ADR-11)
 - **128 random bits** from a cryptographically secure generator (`System.Security.Cryptography.RandomNumberGenerator`), base64url-encoded without padding → **22 characters** (requirement: ≥ 96 bits). Check legibility at the smallest supported print size.
@@ -206,7 +206,7 @@ A DynamoDB `Query` matches **exactly one partition key value**, and partition ke
 
 | Attribute | Value | Present on |
 |-----------|-------|-----------|
-| `TENANT_PK` | `T#{tenantId}` | Every tenant-owned item in every table (catalog, media, menus, publishing; ai in phase 2), including `QR#`, `ROUTE#`, `OUTBOX`, `INBOX#`, work items |
+| `TENANT_PK` | `T#{tenantId}` | Every tenant-owned item in every table (catalog, media, menus, publishing; ai in phase 2), including `QR#`, `ROUTE#`, `OUTBOX`, `INBOX#`, job state items |
 | `TENANT_SK` | `{PK}|{SK}` | Same items |
 
 GSI `TenantIndex`: partition key `TENANT_PK`, sort key `TENANT_SK`, projection **KEYS_ONLY**. A GSI projection always includes the table's `PK` and `SK`, so `DeleteItem` needs nothing more. QR codes and route slugs are parsed from `PK` to delete their S3 files.
@@ -240,7 +240,7 @@ sequenceDiagram
   P->>S: "unavailable" manifests + invalidate
   T->>T: grace ends: status = deleting, job + module rows
   T->>T: quiet period (>= 30 min)
-  W->>T: claim module row (SKIP LOCKED + lease)
+  W->>T: receive SQS task, claim module row (conditional update + lease)
   W->>D: Query TenantIndex (Publishing: QR#/ROUTE# first)
   W->>S: delete QR/route files + invalidate
   loop until a pass finds nothing
@@ -254,9 +254,9 @@ sequenceDiagram
 ```
 
 1. **Schedule.** Owner requests deletion → tenant `pending_deletion`. Grace period **30 days (provisional, pending legal review)**, cancellable. `TenantDeletionScheduled` → Publishing sets `TENANTGUARD = BLOCKED` and marks every location dirty → "unavailable" manifests (invalidated). The API rejects writes (`ITenantContext` status gate, cache ≤ 60 s). Cancellation reverses this.
-2. **Start.** When the grace period ends, Tenancy sets `deleting` and creates `tenant_deletion_jobs` + one `tenant_deletion_module_status` row per module (doc 08 §4.1). Every worker checks tenant status before each write; pollers and handlers skip work and events for non-active tenants; projection builders write nothing (TI-6).
+2. **Start.** When the grace period ends, Tenancy sets `deleting` and creates `tenant_deletion_jobs` + one `tenant_deletion_module_status` row per module (doc 08 §4.1). Every worker checks tenant status before each write; SQS handlers skip jobs and events for non-active tenants; projection builders write nothing (TI-6).
 3. **Quiet period ≥ 30 min** (longer than any job lease plus the status cache TTL) before purging starts. In-flight publish commits fail on the guard anyway.
-4. **Module purge** (worker claims its module row with `FOR UPDATE SKIP LOCKED` and a lease; idempotent and resumable):
+4. **Module purge** (the supervisor enqueues one `tenancy` SQS task per module through the outbox; the receiving worker claims the module row with a conditional update and a lease; idempotent and resumable):
    1. **Publishing first:** list `QR#`/`ROUTE#` items via the TenantIndex, delete their S3 files and invalidate those paths, then the items. `TENANTGUARD` is deleted last.
    2. For each table, a **pass**: page through `Query(TenantIndex, TENANT_PK = T#t)`. For each page, `BatchWriteItem` deletes (≤ 25, keys de-duplicated). Retry `UnprocessedItems` **and** throttling exceptions with exponential backoff + jitter; after 8 attempts the module row → `failed`. `LastEvaluatedKey` is stored as a **checkpoint only as an optimization**: on resume, the current pass restarts, which is safe because deletes are idempotent (TI-9).
    3. A pass that finds nothing ends the loop. **Verification passes** run 30 min later and again 24 h later (`verify_after`); anything found restarts the loop. Only then → `done`.

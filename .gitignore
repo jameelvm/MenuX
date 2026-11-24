@@ -48,3 +48,6 @@ crash.log
 .localstack/
 volume/
 *.log
+
+# --- Archives (local snapshots such as docs.zip / src.zip; never committed) ---
+*.zip

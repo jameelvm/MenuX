@@ -1,6 +1,6 @@
 # 10 — 12-Week Implementation Roadmap (single developer, local-first)
 
-**Revision 0.3 — DRAFT, pending approval. The proposed plan is §12 (not yet approved, C5).** §5, §6 and §11 are kept as history.
+**Revision 0.3. The plan is §12: week 1 approved (W1–W3), weeks 2–12 approved as written (C5, 2026-11-21).** §5, §6 and §11 are kept as history.
 Revision 0.2: reworked per Architecture Review 0.2 item 11; replaced the team-based Rev 0.1 plan.
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
 
@@ -24,7 +24,7 @@ Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
 1. **Local first.** Everything runs with `docker compose up` (or an Aspire AppHost), `dotnet run` and `ng serve`. Cloud work starts only once the domain works locally.
 2. **One vertical slice at a time,** end to end: API, UI, tests and docs.
 3. **Production-shaped code, small infrastructure.** Tenant isolation, outbox, idempotency, the publish state machine and architecture tests are built from the start. They're expensive to retrofit and they're what the learning is about. Multi-account AWS, Multi-AZ and the production network wait.
-4. **Abstract only where local and cloud differ:** identity provider (standard OIDC: Keycloak locally, Cognito in AWS) and object storage (S3 API locally). Background work dispatch is identical everywhere (work-item pollers, ADR-18).
+4. **Abstract only where local and cloud differ:** identity provider (standard OIDC: Keycloak locally, Cognito in AWS) and object storage (S3 API locally). Background jobs use the same SQS API everywhere (LocalStack locally, Amazon SQS in AWS; ADR-18).
 5. **One new technology focus per week,** to limit learning overload.
 6. **Every week has a core and a stretch goal.** Drop the stretch goal first.
 7. **Write a short learning note or ADR each week** in `docs/`.
@@ -53,7 +53,7 @@ Review item 6 asks for supported versions to be **checked when the environment i
 | PostgreSQL | Docker container (same major as RDS) | RDS PostgreSQL |
 | DynamoDB | DynamoDB Local, with tables created from a shared table definition (also used by Terraform) | DynamoDB |
 | Object storage | LocalStack S3 (or MinIO) | S3 |
-| Background work | Work items claimed with leases (DynamoDB `WorkIndex`, PostgreSQL `SKIP LOCKED`), polled by the worker | Same (no SQS, no Streams in MVP-1; ADR-18) |
+| Background work | Amazon SQS API on LocalStack (`sqs` added to the existing 4.14.0 image in week 2); transactional outbox relay | Amazon SQS standard queues + DLQs (ADR-18); no DynamoDB Streams |
 | Identity | Keycloak with a test realm (users in two tenants, every role) | Cognito |
 | Email | Mailpit | SES |
 | Observability | OpenTelemetry → Aspire dashboard or Jaeger | CloudWatch / X-Ray |
@@ -172,11 +172,13 @@ The Rev 0.2 plan above is kept for history. Once approved, this table replaces �
 
 Cut lines (§6) still apply. Adjusted: if behind at the end of week 6, rollback stays API-only and unpublish is done through an admin endpoint. With ~20 h/week (U12), weeks 1–8 plus week 9 are the realistic 12-week target.
 
-## 12. Proposed roadmap — Rev 0.3 draft (pending approval, C5)
+## 12. Roadmap — Rev 0.3 (weeks 2–12 approved as written, C5, 2026-11-21)
 
-Rev 0.3 draft notes: no SQS anywhere in this plan (ADR-18). Region `me-central-1` proposed (ADR-17; week-1 feasibility check only, region decision before week 9). Market packs and Arabic/RTL add about 3–5 days, absorbed by flex scope. **The protected tests and the 12-week frame are not squeezed**: if the work doesn't fit, flex scope or the timeline moves.
+**Approved 2026-11-21 (C5, doc 13 §1d):** weeks 2–12 as written below. Planned work is **not** moved, deferred or removed because of the available time. If the work runs behind, the **end date slips** and the order is kept (§12.3). Background jobs use **Amazon SQS** via a transactional outbox relay (ADR-18, accepted 2026-11-21); the SQS items below follow from that decision and don't move any work.
 
-**Week 1 approved (W1–W3, 2026-11-21):** week-1 foundation work may start while C1 and C5 remain open. Scope: the week-1 row below, **without** Keycloak (week 2, after ADR-06) and **without** the `DynamoItemWriter` and its architecture rule (week 3, after ADR-09). No running AWS application resources and no real tenant data. Local orchestration: plain Docker Compose. Later weeks are gated by doc 13 §1c.
+Rev 0.3 notes: Region `me-central-1` proposed (ADR-17; week-1 feasibility check only, region decision before the pilot environment). Market packs and Arabic/RTL add about 3–5 days. **The protected tests are not squeezed**: if the work doesn't fit, the timeline moves (§12.3).
+
+**Week 1 approved (W1–W3, 2026-11-21):** week-1 foundation work may start (C5 has since been approved for weeks 2–12). Scope: the week-1 row below, **without** Keycloak (week 2, after ADR-06) and **without** the `DynamoItemWriter` and its architecture rule (week 3, after ADR-09). No running AWS application resources and no real tenant data. Local orchestration: plain Docker Compose. Later weeks are gated by doc 13 §1c.
 
 **Why revised:** the product owner set U12 to **about 20 hours/week**. Learning priorities, in order: (1) DynamoDB modelling + distributed consistency, (2) AWS + Terraform, (3) Angular, (4) security fundamentals (identity, BFF/OIDC, tenant isolation), (5) testing, CI/CD, observability and production readiness. **AI menu import and the Claude API integration move to phase 2.** The 12 weeks focus on **local MVP-1 plus the first AWS environment**. Critical consistency, tenant-isolation and recovery tests are **protected**: when time runs short, feature scope shrinks or the timeline moves, never these tests.
 
@@ -184,17 +186,17 @@ Rev 0.3 draft notes: no SQS anywhere in this plan (ADR-18). Region `me-central-1
 
 | Week | Theme | Core deliverables | Learning focus |
 |------|-------|-------------------|----------------|
-| 1 | Foundations | Version/library verification; `git init`; .NET 10 solution + architecture tests; docker compose; **CI (build + test)**; Angular workspace; AWS account hardening + budget alarm + Terraform state bucket; **`me-central-1` service/version check** (feasibility only; input to the ADR-17 region decision before week 9) | 5, 2 |
-| 2 | Identity & tenancy | BFF cookie session via Keycloak; provider-neutral identity; tenants, multiple locations, roles/permissions; **RLS**; tenant-status gate; audit; **cross-tenant test harness**; deletion framework skeleton; OpenTelemetry locally | 4, 5 |
-| 3 | Catalog + media | `DynamoItemWriter` (tagging, no upserts); catalog + media tables with TenantIndex; items, modifiers, i18n maps; **market packs** (US pilot + UAE skeleton), canonical allergen codes + schemes, halal/pork/alcohol fields, Arabic name normalization; uploads + WebP; **coverage scan**; catalog/media purge | 1 |
+| 1 | Foundations | Version/library verification; `git init`; .NET 10 solution + architecture tests; docker compose; **CI (build + test)**; Angular workspace; ~~budget alarm + Terraform state bucket~~ (moved to week 9 by the product owner, 2026-11-22; §12.7); **`me-central-1` service/version check** (public sources) (feasibility only; input to the ADR-17 region decision before the pilot environment) | 5, 2 |
+| 2 | Identity & tenancy | BFF cookie session via Keycloak; provider-neutral identity; tenants, multiple locations, roles/permissions; **RLS**; tenant-status gate; audit; **cross-tenant test harness**; deletion framework skeleton; **minimal SQS: LocalStack `sqs`, transactional outbox relay, consumer with DLQ** (used by the deletion skeleton); OpenTelemetry locally | 4, 5 |
+| 3 | Catalog + media | `DynamoItemWriter` (tagging, no upserts); catalog + media tables with TenantIndex; items, modifiers, i18n maps; **market packs** (US pilot + UAE skeleton), canonical allergen codes + schemes, halal/pork/alcohol fields, Arabic name normalization; uploads + WebP (**media processing on the SQS `media` queue**, SkiaSharp); **coverage scan**; catalog/media purge | 1 |
 | 4 | Menu authoring | Menus, sections, placements, reorder, menu locking (header bumps META), location assignment, schedules (weekly + date-range overrides), sold-out flag; Angular admin editor with RTL support; menus purge | 1, 3 |
-| 5 | Publishing core | ACTIVEJOB lock, jobs, poller, lease, optimistic snapshot read, content-addressed snapshot, guarded commit, MANIFEST state + builder | 1 |
+| 5 | Publishing core | ACTIVEJOB lock, jobs, **publishing-specific SQS work** (`publishing` queue + DLQ on the week-2 relay/consumer, idempotent job and manifest handlers), lease, optimistic snapshot read, content-addressed snapshot, guarded commit, MANIFEST state + builder | 1 |
 | 6 | Publishing robustness + QR | **Failure-injection suite**, reconciler, rollback (full state), unpublish, location deactivation; QR codes + QR/route projections; publishing purge | 1 |
 | 7 | Static public app | Prerendered shell + CSR, schedules, language switch, unavailable states, runtime UI dictionaries (`en` + `ar`), **Arabic/RTL** with Arabic font in budget, price-display policy; **Lighthouse + axe + RTL checks in CI** | 3, 5 |
 | 8 | Deletion/export + **local MVP-1 gate** | Deletion orchestration, supervisor, verification passes, S3 versions, identity handling, export; **all protected tests green** (§12.2) | 1, 4, 5 |
-| 9 | First AWS environment | Terraform: cost-reduced VPC, DynamoDB, RDS, S3, two hostnames + CloudFront + Function, WAF (`us-east-1`), ECR, Fargate, ALB in the region decided before week 9 (proposed **`me-central-1`**, ADR-17; if the week-1 check found a blocker, the product owner decides the fallback) | 2 |
+| 9 | First AWS environment | **Start of the AWS phase (§12.7):** AWS SSO profile, bootstrap (state bucket + budget alert) from the locally prepared Terraform, pending AWS checks A3–A5. Terraform: cost-reduced VPC, DynamoDB, RDS, S3, **SQS queues + DLQs**, two hostnames + CloudFront + Function, WAF (`us-east-1`), ECR, Fargate, ALB as a **temporary test deployment in `us-east-1`** (§12.6: deploy, test, tear down; only state storage and the budget alert persist). The ADR-17 pilot/launch region stays Proposed | 2 |
 | 10 | Identity + delivery in AWS | Cognito via configuration; **CD with GitHub Actions OIDC**; Secrets Manager; DB migrations as a deployment step; token contract tests against Cognito | 2, 4, 5 |
-| 11 | Observability & operations | OpenTelemetry → CloudWatch/X-Ray; dashboards; alarms (5xx, failed and stuck work items, publish/manifest failures, purge failures, QR misses, budget); log retention; WAF rate rule | 5, 2 |
+| 11 | Observability & operations | OpenTelemetry → CloudWatch/X-Ray; dashboards; alarms (5xx, SQS DLQ depth and oldest-message age, outbox relay backlog, stuck jobs, publish/manifest failures, purge failures, QR misses, budget); log retention; WAF rate rule | 5, 2 |
 | 12 | Production readiness | **PITR restore drills** (DynamoDB, RDS) + projection rebuild from scratch in AWS; public-path load test; security review against the checklist; runbooks (publish stuck, purge failed, restore); cost review; retrospective + phase-2 plan | 5, 4 |
 
 ### 12.2 Protected tests (never cut to fit the schedule)
@@ -203,11 +205,13 @@ Rev 0.3 draft notes: no SQS anywhere in this plan (ADR-18). Region `me-central-1
 1. Cross-tenant isolation for every endpoint; RLS (no tenant → zero rows; no pooled-connection leakage; no BYPASSRLS for the app role).
 2. TenantIndex coverage scan across all tables; architecture rule "no DynamoDB writes outside `DynamoItemWriter`".
 3. Tenant deletion end-to-end, including crash/resume, in-flight job races, no downstream writes triggered by purge (outbox/handlers skip non-active tenants), S3 versions, multi-tenant users, and the other tenant intact (doc 12 §3.3).
-4. Publish consistency: failure injection at each step, concurrent requests (409), stale draft, retry after FAILED, rollback/republish, unpublish, manifest rebuild convergence, simulated index lag.
+4. Publish consistency: failure injection at each step, concurrent requests (409), stale draft, retry after FAILED, rollback/republish, unpublish, manifest rebuild convergence, simulated index lag, **duplicate and redelivered SQS messages, crash between commit and send (outbox relay)**.
 5. Recovery: projection rebuild from authoritative state (local and AWS); PITR restore drills (week 12).
 6. Optimistic concurrency on menu and header edits.
 
-### 12.3 Flex scope (cut in this order if behind; the plan slips rather than touching §12.2)
+### 12.3 Priority order if behind (C5, 2026-11-21: nothing is cut or deferred; the end date slips)
+
+All items below stay in the plan. If the work runs behind, the schedule extends and these items are done **last, in this order**; §12.2 is never touched.
 1. Email invitations (owner creates users directly instead).
 2. Editing UI for more than two languages and side-by-side translation views (Arabic + English entry and display stay in scope; the full multi-language UI is required before the UAE launch).
 3. Rollback UI (keep the API endpoint).
@@ -216,7 +220,7 @@ Rev 0.3 draft notes: no SQS anywhere in this plan (ADR-18). Region `me-central-1
 6. Allergen filter in the public app (allergen display stays).
 7. Week 11–12 items beyond the protected restore drill: load test, then dashboard polish.
 
-If weeks 1–8 overrun by more than two weeks, the AWS weeks move out rather than compressing the local gate.
+If weeks 1–8 overrun, the whole schedule moves out in order (the AWS weeks start later); the local MVP-1 gate is never compressed and no planned work is removed.
 
 ### 12.4 Moved to phase 2
 AI menu import (ADR-15, still the first AI capability, behind human review) and the Claude API integration, plus everything already listed in §8.
@@ -239,3 +243,36 @@ AI menu import (ADR-15, still the first AI capability, behind human review) and 
 **Required gates (draft):**
 - **Before onboarding any real pilot tenant:** T1 tenant-scoped DynamoDB access policies (doc 11 T1), plus safeguards G2–G12 (doc 04 §5.3).
 - **Before the UAE commercial launch:** an **external penetration test**, plus the UAE launch readiness items in §12.4 and the production topology (doc 04 §5.1).
+
+### 12.6 Temporary AWS test deployments (product owner, 2026-11-21)
+
+- **When:** only in the final AWS phase (weeks 9–12); nothing is deployed to AWS before then (§12.7, 2026-11-22).
+- **Region:** `us-east-1` for test deployments (weeks 9–12 and any later test runs). This is a test region only; it is **not** the ADR-17 pilot/launch region decision, and ADR-17 stays Proposed.
+- **Lifecycle:** deploy for a test run, run the tests (including the week-12 restore drills), then **tear the test resources down**. Database data may be discarded. Test deployments are **not production-ready** and never hold real tenant data.
+- **What persists between runs:** only what test runs need: the Terraform state bucket and the AWS budget alert (separate `bootstrap` Terraform configuration). Everything else belongs to the destroyable `test` configuration.
+- **Teardown targets only MenuX test resources:**
+  1. Separate Terraform root modules and state files: `infrastructure/terraform/bootstrap` (persistent; the state bucket has `prevent_destroy`) and `infrastructure/terraform/test` (destroyable). `terraform destroy` is only ever run in `test`, after reviewing its plan.
+  2. Every test resource is tagged `project = menux`, `environment = test` (provider `default_tags`) and named with the prefix `menux-test-`.
+  3. Test-only settings so teardown completes: RDS `deletion_protection = false` and `skip_final_snapshot = true`; DynamoDB deletion protection off; test S3 buckets `force_destroy = true`; ECR `force_delete = true`.
+  4. After destroy, a leftover check lists anything still tagged `project = menux, environment = test` (Resource Groups Tagging API) and reports it; nothing outside those tags is touched.
+- **Cost guard:** the $25/month budget alert is a notification, not a spending cap; teardown after each run is the real cost control.
+
+### 12.7 AWS work happens only in the final AWS phase (product owner, 2026-11-22)
+
+- **No AWS resources before the final AWS phase (weeks 9–12, the end of the project).** Nothing is deployed and no `terraform apply` runs before then: no state bucket, budget alert, GitHub OIDC provider, IAM deployer role or test environment.
+- **No AWS access needed before then:** no AWS SSO profile, account ID or AWS credentials are required for weeks 2–8.
+- **Terraform is prepared locally:** `infrastructure/terraform/bootstrap` and `infrastructure/terraform/test` are written and checked offline with `terraform fmt -check` and `terraform validate` (after `terraform init -backend=false`, which downloads providers but doesn't touch AWS). No `terraform plan` against AWS.
+- **Local development and testing continue** on the Docker stack (PostgreSQL, DynamoDB Local, LocalStack S3/SQS, Keycloak, Mailpit).
+- **Pending until the final AWS phase** (each marked "pending AWS" where it appears):
+
+| # | Item | Done in |
+|---|------|---------|
+| A1 | AWS SSO profile `menux` and the account ID (existing account; root MFA and Identity Center confirmed by the product owner) | Start of week 9 |
+| A2 | Bootstrap: Terraform state bucket (`us-east-1`, encryption, versioning, public access blocked) and the USD 25/month budget alert | Start of week 9 |
+| A3 | PostgreSQL version check: RDS PostgreSQL 18 available in `us-east-1` (`aws rds describe-db-engine-versions`) | Week 9, before the RDS Terraform |
+| A4 | `terraform plan`/`apply` for bootstrap and test; first test deployment and teardown | Week 9 |
+| A5 | LocalStack vs AWS behaviour (S3 conditional writes and versioning, SQS DLQ and redrive) confirmed against real AWS | Weeks 9–10 |
+| A6 | GitHub OIDC provider and deployer role for the test pipeline (proposal pending product-owner decision) | Week 10 |
+| A7 | Cognito token contract tests against real Cognito | Week 10 |
+| A8 | Restore drills and projection rebuild in AWS | Week 12 |
+| A9 | `me-central-1` account-level checks (opt-in region, RDS versions there) | Before the pilot environment (ADR-17) |

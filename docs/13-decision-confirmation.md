@@ -6,7 +6,7 @@ Revision 0.3 (draft) · Date: 2026-11-21 · Basis: [doc 12](12-architecture-sign
 >
 > The §4 changes have been drafted into docs 01–11 as proposals (Rev 0.3 draft); they take effect only after confirmation.
 >
-> **Week 1:** week-1 foundation work is approved (W1–W3, §1b) while C1 and C5 remain open. Later work waits only for the specific decisions it needs (§1c).
+> **Week 1:** week-1 foundation work is approved (W1–W3, §1b). **Week-2 gate decided 2026-11-21 (§1d):** C5, ADR-06, ADR-18 (SQS), U4, U7. C1 stays open for the other P-items; later work waits only for the specific decisions it needs (§1c).
 
 ---
 
@@ -16,20 +16,20 @@ Revision 0.3 (draft) · Date: 2026-11-21 · Basis: [doc 12](12-architecture-sign
 |---|----------|-----------|------|
 | P1 | ADR-04 static public projections, **with doc 12 changes** | doc 12 §2 | Separate hostnames (X-5), cache-control table |
 | P2 | ADR-05 static Angular shell + CSR, **with changes** | doc 12 §2 | Runtime UI dictionaries (`en` + `ar`), in-app browser matrix; **Arabic/RTL from day one** (draft 2026-11-21) |
-| P3 | ADR-06 Fargate + Cognito (Keycloak locally), **with changes** | doc 12 §2 | Provider-neutral identity columns (X-2), token contract tests |
+| P3 | **Approved 2026-11-21.** ADR-06 Fargate + Cognito (Keycloak locally), **with changes** | doc 12 §2 | Provider-neutral identity columns (X-2), token contract tests |
 | P4 | ADR-08 AI suggestions need human approval, **with changes** | doc 12 §2 | No allergen inference; AI inputs under the tenant prefix |
 | P5 | ADR-09 TenantIndex deletion, **with TI-1…TI-13** | doc 12 §3 | |
 | P6 | ADR-10 authoritative pointer, **with PUB-1…PUB-8** | doc 12 §4 | |
 | P7 | ADR-11 QR IDs + rate limiting, **with changes** | doc 12 §2 | Edge format check; WAF in `us-east-1` |
-| P8 | Poller-only job dispatch (PUB-9) | doc 12 §4.3 | Streams → Pipes dropped from MVP-1 |
+| P8 | ~~Poller-only job dispatch (PUB-9)~~ **Superseded 2026-11-21 by ADR-18 (Amazon SQS via outbox relay).** | doc 12 §4.3 | Streams → Pipes dropped from MVP-1 |
 | P9 | TTL-based manifest refresh, ~30 s (PUB-12) | doc 12 §4.4 | Invalidate only on revoke, rename and suspension |
 | P10 | QR automatic IP blocking → phase 2; alarms in MVP-1 | doc 12 §2 ADR-11 | |
-| P11 | BFF cookie session for the admin portal (T2) | doc 12 §2 ADR-06 | |
+| P11 | **Approved 2026-11-21.** BFF cookie session for the admin portal (T2) | doc 12 §2 ADR-06 | |
 | P12 | U3: reuse items across menus; per-menu price override; no location pricing | doc 12 §6 | |
-| P13 | U4: hotel outlets = locations; no hierarchy above the tenant | doc 12 §6 | |
+| P13 | **Approved 2026-11-21.** U4: hotel outlets = locations; no hierarchy above the tenant | doc 12 §6 | |
 | P14 | U5: multilingual model; up to 4 extra languages, entered manually; no AI translation | doc 12 §6 | **Arabic + English end to end in MVP-1**; full multi-language UI required before the UAE launch (draft 2026-11-21) |
 | P15 | U6: schedules in MVP-1; real-time sold-out in phase 2 (sold-out flag via publish) | doc 12 §6 | **Plus date-range overrides** (Ramadan, holidays) (draft 2026-11-21) |
-| P16 | U7: SaaS billing deferred; static plan limits + `tenants.plan_key` | doc 12 §6 | |
+| P16 | **Approved 2026-11-21.** U7: SaaS billing deferred; static plan limits + `tenants.plan_key` | doc 12 §6 | |
 | P17 | U11: no publish approval workflow | doc 12 §6 | |
 | P18 | Ordering, online payments, SaaS billing outside MVP-1 | ADR-12, doc 12 §8 | Already accepted for ordering/payments; billing confirmed as deferred |
 | P19 | AI menu import as the first AI capability, **behind human review** (ADR-15) | ADR-08, ADR-15 | Supported. **Timing: phase 2** (2026-11-21), together with the Claude API integration. |
@@ -45,7 +45,7 @@ Revision 0.3 (draft) · Date: 2026-11-21 · Basis: [doc 12](12-architecture-sign
 | D3 | ADR-19 (new): market-neutral core with market packs; nothing market-specific hard-coded | doc 11 ADR-19 |
 | D4 | P2, P14, P15 updated; F6 (Unicode/Arabic normalization) and F7 (market packs) revised; about 3–5 days of work **without squeezing the protected tests or the 12-week frame** | doc 14 §3, doc 10 §12 |
 | D5 | Optional `containsPork`, `containsAlcohol`, `halalStatus` fields; rules pending UAE research | doc 02 FR-CAT-09, doc 07 |
-| D6 | C1 and C5 remain **unconfirmed** | §2 |
+| D6 | C1 remains **unconfirmed** except P3, P11, P13, P16 (approved) and P8 (superseded); C5 answered 2026-11-21 | §1d, §2 |
 | D7 | Doc-by-doc changes and split legal tracks, all as Rev 0.3 draft; **not committed or pushed** | docs 01–14, README |
 
 ADR-17 and ADR-19 remain **Proposed** until the final approval step.
@@ -58,18 +58,38 @@ ADR-17 and ADR-19 remain **Proposed** until the final approval step.
 | W2 | Approve the week-1 scope (doc 10 §12.1 week 1; doc 14 §6) | **Approved** | Week 1 only. **Doesn't** approve the full architecture or roadmap. **No running AWS application resources and no real tenant data** in this phase |
 | W3 | Local orchestration | **Plain Docker Compose** | — |
 
+### 1d. Confirmed week-2 gate decisions (product owner, 2026-11-21)
+
+| # | Decision | Answer | Notes |
+|---|----------|--------|-------|
+| C5 | Roadmap doc 10 §12, weeks 2–12 | **Approved as written** | Planned work isn't moved, deferred or removed because of time. If behind, the end date slips and the order is kept; §12.3 is a priority order, not a cut list. Protected tests unchanged |
+| ADR-06 | Hosting and identity (P3, P11) | **Accepted** | ECS Fargate for API and Worker; Cognito in AWS; Keycloak locally; Admin BFF cookie session; provider-neutral `idp_issuer` + `idp_subject` |
+| ADR-18 | Background jobs | **Accepted (rewritten)** | **Amazon SQS from MVP-1**; no database polling as the job queue; transactional outbox relay for reliable enqueue; DLQs; idempotent handlers; SNS later when fan-out is needed. **Supersedes P8 and F1**; F2 (no FIFO) and F3 (no Streams) kept. Local: same LocalStack 4.14.0 image with `sqs` |
+| U4 / P13 | Outlets; hierarchy | **Approved** | Each hotel outlet is a location under its tenant; no hierarchy above the tenant in MVP-1 |
+| U7 / P16 | SaaS billing | **Approved** | Stripe subscription billing deferred beyond MVP-1; `tenants.plan_key` + static plan limits; `plan_key` stays linkable to the deferred `billing` schema |
+
+| ADR-18 settings | DLQ policy | **Confirmed** | 5 failed receives → DLQ; 14-day DLQ retention; queues `publishing`, `media`, `tenancy`, `events`; DLQ alerting/inspection/redrive documented (doc 06 §5.1) |
+| SQS schedule | Build order | **Confirmed** | Week 2: minimal LocalStack SQS + outbox relay + consumer (with the deletion skeleton); week 3: media processing; week 5: publishing-specific work |
+| Test deployments | Region and lifecycle | **Confirmed** | `us-east-1`, temporary (deploy, test, tear down; data discardable; not production-ready); only state storage and the budget alert persist; teardown limited to MenuX test resources (doc 10 §12.6). ADR-17 unchanged (Proposed) |
+| Budget | AWS budget alert | **Confirmed** | USD 25/month alert, not a cap; recipient = product owner's email, kept out of the repository |
+| State bucket | Terraform state | **Confirmed** | `us-east-1`; encryption, versioning, public access blocked |
+| L6 | Libraries | **Confirmed** | SkiaSharp (images), QRCoder (QR codes) |
+| AWS timing | When AWS work happens | **Confirmed 2026-11-22** | No AWS deployment until the final AWS phase (weeks 9–12): no state bucket, budget, OIDC provider, deployer role or test environment before then; no SSO profile or account ID needed yet; Terraform prepared locally (`fmt`/`validate` only); AWS-only checks pending (doc 10 §12.7) |
+
+C1 is therefore decided for **P3, P11, P13, P16** (approved) and **P8** (superseded). The other P-items stay open until their week in §1c.
+
 ### 1c. Decision gates by week (from the 2026-11-21 decision list)
 
 | Before week | Decisions needed first (each answered separately) |
 |-------------|---------------------------------------------------|
-| 2 | C5 roadmap for weeks 2–12 (doc 10 §12, P20/P21); ADR-06 (Fargate; Keycloak locally, Cognito in AWS; BFF — P3, P11); ADR-18 (work items + outbox, no SQS/Streams — P8, F1–F3); P13/U4 (outlets = locations, no hierarchy); P16/U7 (billing deferred, `plan_key`) |
+| 2 | **Decided 2026-11-21 (§1d):** C5 roadmap weeks 2–12; ADR-06 (P3, P11); ADR-18 rewritten to SQS via outbox relay (supersedes P8, F1); P13/U4; P16/U7 |
 | 3 | ADR-09 (TenantIndex, single writer, deletion — P5, TI-1…13, F5); C4 + ADR-17 + ADR-19 (US pilot → UAE launch, market packs — F6, F7); P12/U3 (item reuse, per-menu prices); P14/U5 (languages, Arabic + English); U10 (food-shop extras) |
 | 4 | P15/U6 (schedules + date overrides, sold-out via publish); ADR-05 for admin right-to-left (P2) |
 | 5 | ADR-10 (publishing — P6, PUB-1…14, F4); P17/U11 (no approval workflow); ADR-04 (static guest path, manifest TTL — P1, P9) |
 | 6 | ADR-11 (QR, rate limits, alarm-only blocking — P7, P10) |
 | 7 | ADR-05 public app (P2) |
-| 9 | ADR-17 region decision (informed by the week-1 feasibility check); G2 pilot-account choice (recommended by then) |
-| Pilot | §12.5 schedule; G1–G12 checklist; each residual risk E-3a…E-3e accepted separately (doc 04 §5.3); success measures CM1–CM6 |
+| 9 | Test deployments in `us-east-1` (decided 2026-11-21, doc 10 §12.6); G2 pilot-account choice (recommended by then) |
+| Pilot | **ADR-17 region decision, before the pilot environment** (§12.5 phase A; informed by the week-1 feasibility check and current AWS status); §12.5 schedule; G1–G12 checklist; each residual risk E-3a…E-3e accepted separately (doc 04 §5.3); success measures CM1–CM6 |
 | Phase 2 | ADR-08, ADR-15 |
 
 ## 2. Requires your explicit confirmation
@@ -81,8 +101,8 @@ None of these blocks week-1 foundation work (W1, §1b). Each is needed only by t
 | C1 | **Formal approval** of P1–P21 | Approve all / list exceptions, or decide item by item | Not needed for week 1. Each part is needed by the week listed in §1c (from week 2); all of it before the Rev 0.3 baseline is published | Turns proposals into the baseline |
 | C2 | ~~U12 weekly hours~~ | **Answered: ~20 h/week** → P20 | — | — |
 | C3 | ~~U12 learning priorities~~ | **Answered** → P20 | — | — |
-| C4 | **Markets** | **Draft (draft 2026-11-21):** pilot/validation = United States; target commercial launch = UAE; region `me-central-1` proposed (ADR-17; region decision before week 9). Pending final approval | Not needed for week 1 (the `me-central-1` check is a week-1 task under W2). Markets and market packs before week 3; region before week 9 (§1c) | Region, data residency, languages, currency, allergen scheme, legal tracks |
-| C5 | **Roadmap doc 10 §12** | Approve / adjust | Not needed for week 1 (week-1 scope approved under W2). Weeks 2–12 before week 2; the §12.5 pilot schedule before the pilot (§1c) | Replaces the Rev 0.2 plan |
+| C4 | **Markets** | **Draft (draft 2026-11-21):** pilot/validation = United States; target commercial launch = UAE; region `me-central-1` proposed (ADR-17; region decision before the pilot environment). Pending final approval | Not needed for week 1 (the `me-central-1` check is a week-1 task under W2). Markets and market packs before week 3; region before the pilot environment (§1c) | Region, data residency, languages, currency, allergen scheme, legal tracks |
+| C5 | ~~Roadmap doc 10 §12~~ | **Answered 2026-11-21: weeks 2–12 approved as written** (§1d). The §12.5 pilot schedule is still decided before the pilot (§1c) | — | — |
 
 ## 3. Requires legal or market research
 
@@ -119,6 +139,7 @@ Drafted into docs 01–11 on 2026-11-21 as proposals (Rev 0.3 draft); they becom
 ## 5. Implementation kickoff checklist (draft — superseded by the checklist in doc 14 §6)
 
 - [x] Week-1 start decided (W1–W3, §1b); C1 and C5 remain open and gate later weeks (§1c)
+- [x] Week-2 gate decided 2026-11-21 (§1d): C5, ADR-06, ADR-18 (SQS), U4, U7
 - [ ] `git init`, `.gitignore`, first commit of `docs/`
 - [ ] Version verification recorded in `docs/architecture/versions.md` (.NET 10 SDK, Npgsql, PostgreSQL major on RDS, Angular major, Node LTS, AWS SDK, Terraform, LocalStack features incl. S3 conditional writes, Keycloak)
 - [ ] Image and QR library licences checked (L6)

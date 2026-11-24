@@ -1,7 +1,7 @@
 # 06 — Hybrid Database Architecture
 
 Tags: [S] stated · [D] derived · [A] assumption · [R] recommendation
-**Revision 0.3 (DRAFT, pending approval — doc 13):** media table (X-1); outbox without Streams and work items without SQS (§5, ADR-18); manifest TTL 30 s and snapshot retention (§6); retention per U13 (provisional); deletion lifecycle (§9).
+**Revision 0.3 (DRAFT, pending approval — doc 13):** media table (X-1); outbox without Streams, relayed to Amazon SQS (§5, ADR-18, accepted 2026-11-21); manifest TTL 30 s and snapshot retention (§6); retention per U13 (provisional); deletion lifecycle (§9).
 Revision 0.2: hybrid design **accepted** (§1, §2.5); authoritative state vs. projections (§3, §4, §6); tenant data lifecycle (§9); local development (§8).
 
 ---
@@ -65,7 +65,7 @@ Architecture Review 0.2 accepted the hybrid design. DynamoDB holds Catalog, Menu
 | Tenant deletion jobs and per-module progress | PostgreSQL `tenancy` | Orchestration state for §9. |
 | Audit events | PostgreSQL `audit` (monthly partitions) → archived to S3 | Queryable by tenant/time; append-only. |
 | Outbox | PostgreSQL `<schema>.outbox` tables; DynamoDB `OUTBOX` items in each module table (no Streams in MVP-1) | See §5. |
-| Background work items | DynamoDB items in a sparse `WorkIndex`; PostgreSQL job rows (`SKIP LOCKED`) | Poller-only dispatch, no SQS (ADR-18). |
+| Background jobs | Amazon SQS standard queues + DLQs; authoritative job state stays in DynamoDB items / PostgreSQL rows | Enqueued via the outbox relay (ADR-18). |
 | Scan analytics (phase 2) | S3 (CloudFront standard logs) + Athena | No OLTP load. |
 
 Retention for active and deleted tenants: doc 08 §6 (U13, provisional pending legal review).
@@ -77,9 +77,9 @@ Retention for active and deleted tenants: doc 08 §6 (U13, provisional pending l
 | Within one menu (sections + placements) | Strong for the writer | Single partition; conditional writes with `version` attribute; `TransactWriteItems` for multi-item changes (≤ 100 items). |
 | Draft → live menu | Eventual (seconds) | Publish job state machine. The authoritative pointer is committed in one transaction; projections are rebuilt idempotently (doc 04 §4.1). |
 | Authoritative pointer → public files | Eventual (≤ ~30 s after LIVE, by TTL) | Per-location `MANIFEST` dirty state rebuilt under a lease; reconciler every 5 min. Customers always see a complete earlier or later version, never a mix. |
-| Catalog item edit → menus that use it | Eventual | `ItemChanged` outbox item (same transaction as the item write) → worker poller → menus flagged "unpublished changes". **Published menus never change implicitly.** A change becomes visible only after a republish. |
+| Catalog item edit → menus that use it | Eventual | `ItemChanged` outbox item (same transaction as the item write) → relay → SQS `events` → handler → menus flagged "unpublished changes". **Published menus never change implicitly.** A change becomes visible only after a republish. |
 | Order ↔ menu | Snapshot | Order line copies name, price, modifiers, tax category from the **published version** the guest saw; server re-validates the price against that version. |
-| Tenant lifecycle ↔ catalogue | Eventual | `TenantSuspended`/`TenantDeletionScheduled` events via the PostgreSQL outbox → worker poller → handlers in each module; deletion via per-module job rows (doc 07 §7.3). |
+| Tenant lifecycle ↔ catalogue | Eventual | `TenantSuspended`/`TenantDeletionScheduled` events via the PostgreSQL outbox → relay → SQS `events` → handlers in each module; deletion via per-module job rows (doc 07 §7.3). |
 
 ## 5. Event propagation and background work (Rev 0.3, ADR-18)
 
@@ -91,23 +91,49 @@ flowchart LR
   end
   subgraph DDB[DynamoDB module table]
     T2[business items] --- O2[(OUTBOX items)]
-    W2[(work items: jobs, MANIFEST, media, projections)]
-    WI{{sparse WorkIndex}}
+    W2[(job state: jobs, MANIFEST, media, projections)]
+    WI{{sparse WorkIndex: unsent outbox}}
     O2 --> WI
     W2 --> WI
   end
-  WRK[Worker pollers + leases]
+  WRK[Worker: outbox relay, SQS consumers, leases]
   O1 --> WRK
   J1 --> WRK
   WI --> WRK
   WRK --> H[in-process handlers, idempotent via inbox]
 ```
 
-- **PostgreSQL modules:** business rows and an `<schema>.outbox` row in one transaction. The poller reads `published_at IS NULL`. Job rows are claimed with `FOR UPDATE SKIP LOCKED` plus a lease.
-- **DynamoDB modules:** business items and an `OUTBOX` item (`T#{t}#OUTBOX / EVT#{ulid}`) in one `TransactWriteItems`. Work items carry WorkIndex attributes while pending and are claimed with a conditional update and a lease.
-- **Dispatch:** worker pollers every 2–5 s dispatch events to in-process handlers. Handlers are idempotent via an inbox (`<schema>.inbox`, or DynamoDB `INBOX#` items with TTL, tagged with `TENANT_*`). Handlers skip events for non-active tenants.
-- **No SQS and no DynamoDB Streams in MVP-1.** Why: one mechanism locally and in AWS, less infrastructure, and purge deletes can't trigger downstream reactions. Revisit trigger: volume or latency beyond polling; then SQS is introduced behind the same interfaces.
-- Polling cost: a handful of eventually consistent queries per poller every few seconds, which is negligible on on-demand pricing at MVP volume.
+- **PostgreSQL modules:** business rows and an `<schema>.outbox` row in one transaction. The relay reads `published_at IS NULL`, sends to SQS, then sets `published_at`. Job rows (e.g. deletion modules) are claimed by the handler that receives their message, with a conditional status update plus a lease (duplicate guard).
+- **DynamoDB modules:** business items and an `OUTBOX` item (`T#{t}#OUTBOX / EVT#{ulid}`) in one `TransactWriteItems`. Unsent outbox items carry WorkIndex attributes until the relay has sent them. Job items are claimed by the receiving handler with a conditional update and a lease.
+- **Dispatch (ADR-18):** the relay sends outbox records to SQS (`publishing`, `media`, `tenancy`, `events` queues, each with a DLQ). Delivery is at least once and unordered. Handlers are idempotent via an inbox (`<schema>.inbox`, or DynamoDB `INBOX#` items with TTL, tagged with `TENANT_*`). Handlers skip events for non-active tenants.
+- **Retries and failures:** a message is deleted only after success; otherwise it reappears after the visibility timeout with increasing back-off, and moves to the DLQ after 5 failed receives (14-day retention; alerting, inspection and redrive in §5.1). A reconciler re-enqueues jobs whose state stops progressing.
+- **No DynamoDB Streams in MVP-1** (purge deletes write no outbox records, so they trigger nothing downstream). **SNS later**, only when an event needs several independent subscribers.
+
+### 5.1 SQS dead-letter queues: alerting, inspection and redrive (ADR-18)
+
+Settings (product owner, 2026-11-21): every queue (`publishing`, `media`, `tenancy`, `events`) has its own DLQ; a message moves to the DLQ after **5 failed receives** (`maxReceiveCount = 5`); DLQ messages are kept for **14 days** (`MessageRetentionPeriod = 1209600`). The main queue's retention is longer than the time the reconciler needs to notice stalled work.
+
+**Alerting**
+- CloudWatch alarm per DLQ: `ApproximateNumberOfMessagesVisible > 0` for 5 minutes → notification (same channel as the budget alert until an on-call channel exists).
+- CloudWatch alarm per main queue: `ApproximateAgeOfOldestMessage` above the queue's expected processing time (initial value 15 minutes) → notification.
+- Outbox relay backlog (unsent outbox records older than 5 minutes) → alarm; this catches a stuck relay, which SQS metrics can't see.
+- Locally, the same checks run as integration-test assertions; there is no alarming in LocalStack.
+
+**Inspection (read-only first)**
+1. Identify the queue and the time window from the alarm.
+2. Peek at messages without deleting them: `aws sqs receive-message --queue-url <dlq-url> --max-number-of-messages 10 --visibility-timeout 30 --attribute-names All --message-attribute-names All`. Messages carry identifiers only (tenant, entity, job, version), never content, so they are safe to view.
+3. Use `ApproximateReceiveCount`, `SentTimestamp` and the identifiers to find the handler's structured logs and traces (correlation ID = outbox event ID).
+4. Check the authoritative state (job item, `MANIFEST`, asset, deletion module row). If the work has since completed through another path, or the tenant is no longer active, the message is obsolete.
+5. Record the cause (code defect, bad data, dependency outage, tenant state) in the incident log.
+
+**Redrive (after the cause is fixed)**
+1. Deploy the fix, or confirm the dependency has recovered.
+2. Redrive with SQS's built-in DLQ redrive back to the source queue: `aws sqs start-message-move-task --source-arn <dlq-arn>` (optionally `--max-number-of-messages-per-second`), and watch it with `aws sqs list-message-move-tasks --source-arn <dlq-arn>`.
+3. Handlers are idempotent and re-check the current state, so redriven duplicates or obsolete messages do no harm.
+4. Messages that must not be retried (for example for a deleted tenant) are deleted from the DLQ deliberately after step 4 of the inspection, and that decision is logged.
+5. Confirm the DLQ depth returns to 0 and the affected jobs reach their final state; close the alarm.
+
+**Never:** purge a DLQ without inspection; edit message bodies; redrive before the cause is understood.
 
 ## 6. Public read model (store-independent)
 
@@ -141,7 +167,7 @@ Per-tenant restore (one tenant's accidental deletion) isn't possible with whole-
 - PostgreSQL: Docker / Testcontainers, using the same major version as RDS (verified at environment preparation, doc 10 §3).
 - DynamoDB: DynamoDB Local or LocalStack, with tables (including `TenantIndex`) created from a table definition shared by Terraform and tests.
 - S3 (with versioning and conditional writes): LocalStack, or MinIO if the free edition lacks a feature.
-- Background work and outbox dispatch: worker pollers in every environment (no SQS or Streams), so local and AWS behave the same.
+- Background jobs: the SQS API in every environment (LocalStack locally, with `sqs` added to the existing image in week 2), so local and AWS behave the same.
 - DynamoDB Local makes GSIs immediately consistent; tests simulate index lag with a decorator (doc 12 R-1).
 - Full local stack: doc 10 §4.
 

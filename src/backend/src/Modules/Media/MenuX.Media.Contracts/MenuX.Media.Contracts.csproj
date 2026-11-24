@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Public API of the Media module: commands, queries, integration events, DTOs.
+       Other modules may reference this project only (doc 05 §3). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\MenuX.SharedKernel\MenuX.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

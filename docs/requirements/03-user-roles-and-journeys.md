@@ -15,7 +15,7 @@ Revision 0.2: J1 creates locations (multiple supported); J2a marked as the first
 | **Tenant Admin** | Manages menus, staff, locations; no billing/deletion. | [A] | Yes, MFA |
 | **Menu Editor** | Edits catalogue and menus; may or may not publish (see below). | [A] | Yes |
 | **Location Staff** | Marks items sold out; handles orders (if in scope). Scoped to one or more locations. | [A] | Yes |
-| **Platform Admin** | Menu Studio operations staff: tenant management, plans, suspension. | [D] | Yes, MFA, SSO |
+| **Platform Admin** | MenuX operations staff: tenant management, plans, suspension. | [D] | Yes, MFA, SSO |
 | **Platform Support** | Read-only tenant access for support, time-limited and logged. | [D] | Yes, MFA, SSO |
 | **System actors** | Payment provider webhooks, AI worker, schedulers. | [D] | Machine credentials |
 
